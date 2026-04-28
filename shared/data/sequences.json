@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "presets": {
+    "urban_coastal": {
+      "label": "Urban Coastal",
+      "timeline": [
+        {"hour": 5, "weather": "FOGGY", "chance": 0.6},
+        {"hour": 7, "weather": "CLEAR", "chance": 0.7},
+        {"hour": 10, "weather": "CLOUDS", "chance": 0.5},
+        {"hour": 14, "weather": "OVERCAST", "chance": 0.4},
+        {"hour": 17, "weather": "CLEAR", "chance": 0.6},
+        {"hour": 20, "weather": "RAIN", "chance": 0.3},
+        {"hour": 23, "weather": "CLEAR", "chance": 0.8}
+      ],
+      "intervalMinutes": 15
+    },
+    "desert_inland": {
+      "label": "Desert Inland",
+      "timeline": [
+        {"hour": 5, "weather": "CLEAR", "chance": 0.8},
+        {"hour": 8, "weather": "EXTRASUNNY", "chance": 0.9},
+        {"hour": 14, "weather": "EXTRASUNNY", "chance": 0.95},
+        {"hour": 17, "weather": "SMOG", "chance": 0.4},
+        {"hour": 20, "weather": "CLEAR", "chance": 0.8},
+        {"hour": 23, "weather": "CLEAR", "chance": 0.9}
+      ],
+      "intervalMinutes": 20
+    },
+    "mountain_alpine": {
+      "label": "Mountain Alpine",
+      "timeline": [
+        {"hour": 5, "weather": "FOGGY", "chance": 0.8},
+        {"hour": 8, "weather": "CLOUDS", "chance": 0.6},
+        {"hour": 12, "weather": "OVERCAST", "chance": 0.5},
+        {"hour": 15, "weather": "RAIN", "chance": 0.4},
+        {"hour": 18, "weather": "THUNDER", "chance": 0.3},
+        {"hour": 21, "weather": "FOGGY", "chance": 0.7},
+        {"hour": 23, "weather": "CLOUDS", "chance": 0.6}
+      ],
+      "intervalMinutes": 15
+    },
+    "rural_farmland": {
+      "label": "Rural Farmland",
+      "timeline": [
+        {"hour": 5, "weather": "FOGGY", "chance": 0.5},
+        {"hour": 7, "weather": "CLEAR", "chance": 0.7},
+        {"hour": 12, "weather": "CLOUDS", "chance": 0.5},
+        {"hour": 16, "weather": "OVERCAST", "chance": 0.4},
+        {"hour": 19, "weather": "RAIN", "chance": 0.3},
+        {"hour": 22, "weather": "CLEAR", "chance": 0.7}
+      ],
+      "intervalMinutes": 18
+    },
+    "tropical_coast": {
+      "label": "Tropical Coast",
+      "timeline": [
+        {"hour": 5, "weather": "CLEAR", "chance": 0.7},
+        {"hour": 8, "weather": "CLEAR", "chance": 0.8},
+        {"hour": 12, "weather": "CLOUDS", "chance": 0.5},
+        {"hour": 15, "weather": "OVERCAST", "chance": 0.4},
+        {"hour": 18, "weather": "THUNDER", "chance": 0.4},
+        {"hour": 21, "weather": "RAIN", "chance": 0.3}
+      ],
+      "intervalMinutes": 15
+    }
+  }
+}

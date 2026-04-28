@@ -1,0 +1,47 @@
+# FiveM
+fxserver.exe
+resources/
+server.cfg
+server_resources/
+
+# Build & Distribution
+dist/
+build/
+*.zip
+*.rar
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Lua
+luac.out
+*.luac
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+logs/
