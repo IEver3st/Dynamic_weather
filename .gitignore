@@ -5,7 +5,8 @@ server.cfg
 server_resources/
 
 # Build & Distribution
-dist/
+# dist/ is required at runtime; only source maps are ignored.
+dist/*.map
 build/
 *.zip
 *.rar

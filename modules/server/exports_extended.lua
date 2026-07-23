@@ -21,6 +21,9 @@ local function ensureGlobalDefaults()
     if GlobalState.dynamic_weather_blackout == nil then
         GlobalState.dynamic_weather_blackout = false
     end
+    if GlobalState.dynamic_weather_flood_active == nil then
+        GlobalState.dynamic_weather_flood_active = false
+    end
 end
 
 AddEventHandler('onResourceStart', function(name)
@@ -173,4 +176,38 @@ end
 
 function CreateDispatchIncident(data)
     return weatherData().createDispatchIncident(data)
+end
+
+function IsFloodEventActive()
+    return lib.require('modules.server.flood_event').isActive() == true
+end
+
+function GetFloodEventState()
+    return lib.require('modules.server.flood_event').getState()
+end
+
+---@param actor string|nil
+function EndFloodEvent(actor)
+    return lib.require('modules.server.flood_event').endEvent(actor)
+end
+
+---@param actor string|nil
+function StartFloodEvent(actor)
+    return lib.require('modules.server.flood_event').startRandomEvent(actor or 'export')
+end
+
+function IsHurricaneActive()
+    return lib.require('modules.server.hurricane').isActive() == true
+end
+
+function GetHurricaneState()
+    return lib.require('modules.server.hurricane').getState()
+end
+
+function StartHurricane(opts, actor)
+    return lib.require('modules.server.hurricane').startHurricane(opts, actor or 'export')
+end
+
+function EndHurricane(actor)
+    return lib.require('modules.server.hurricane').endHurricane(actor or 'export')
 end

@@ -44,6 +44,26 @@ RegisterNUICallback('dw_saveZones', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('dw_saveFloodSettings', function(data, cb)
+    local settings = data and data.floodSettings
+    if not settings or type(settings) ~= 'table' then
+        cb('error')
+        return
+    end
+    TriggerServerEvent('dynamic_weather:server:saveFloodSettings', settings)
+    cb('ok')
+end)
+
+RegisterNUICallback('dw_saveFloodIgnoreZones', function(data, cb)
+    local zones = data and data.floodIgnoreZones
+    if not zones or type(zones) ~= 'table' then
+        cb('error')
+        return
+    end
+    TriggerServerEvent('dynamic_weather:server:saveFloodIgnoreZones', zones)
+    cb('ok')
+end)
+
 RegisterNUICallback('dw_loadZones', function(data, cb)
     TriggerServerEvent('dynamic_weather:server:loadZones')
     cb('ok')
@@ -53,7 +73,8 @@ RegisterNUICallback('dw_requestZones', function(data, cb)
     local sync = lib.require('modules.client.sync')
     local defs = sync.getZoneDefs()
     local states = sync.getZoneStates()
-    cb({ zones = defs, states = states })
+    local floodIgnoreZones = sync.getFloodIgnoreZones()
+    cb({ zones = defs, states = states, floodIgnoreZones = floodIgnoreZones })
 end)
 
 RegisterNUICallback('dw_closeEditor', function(data, cb)

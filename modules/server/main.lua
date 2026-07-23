@@ -18,6 +18,9 @@ AddEventHandler('onResourceStart', function(name)
     local lightningPole = lib.require('modules.server.lightning_pole')
     lightningPole.start()
 
+    local hurricane = lib.require('modules.server.hurricane')
+    hurricane.start()
+
     print('^2[weather] Cortex Dynamic Weather started^0')
 end)
 
@@ -36,6 +39,12 @@ AddEventHandler('onResourceStop', function(name)
     local lightningPole = lib.require('modules.server.lightning_pole')
     lightningPole.stop()
 
+    local floodEvent = lib.require('modules.server.flood_event')
+    floodEvent.onResourceStop()
+
+    local hurricane = lib.require('modules.server.hurricane')
+    hurricane.stop()
+
     local seaLevel = lib.require('modules.server.sea_level')
     seaLevel.reset('resource stop')
 
@@ -52,6 +61,8 @@ if Config.syncOnJoinImmediate then
                 sync.sendToPlayer(src)
                 local seaLevel = lib.require('modules.server.sea_level')
                 seaLevel.sendToPlayer(src)
+                local hurricane = lib.require('modules.server.hurricane')
+                hurricane.sendToPlayer(src)
             end
         end)
     end)

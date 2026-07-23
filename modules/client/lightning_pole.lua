@@ -14,12 +14,13 @@ local AddExplosion = AddExplosion
 local DoesEntityExist = DoesEntityExist
 local DrawMarker = DrawMarker
 local ForceLightningFlash = ForceLightningFlash
-local GetClosestObjectOfType = GetClosestObjectOfType
 local GetEntityCoords = GetEntityCoords
 local GetEntityModel = GetEntityModel
 local GetGamePool = GetGamePool
 local GetGameTimer = GetGameTimer
 local GetInteriorFromEntity = GetInteriorFromEntity
+local GetModelDimensions = GetModelDimensions
+local GetOffsetFromEntityInWorldCoords = GetOffsetFromEntityInWorldCoords
 local GetPlayerPed = GetPlayerPed
 local PlayerPedId = PlayerPedId
 local RemoveScriptFire = RemoveScriptFire
@@ -33,6 +34,7 @@ local StopGameplayCamShaking = StopGameplayCamShaking
 local ipairs = ipairs
 local math = math
 local pairs = pairs
+local tonumber = tonumber
 local type = type
 
 local function lightningConfig()
@@ -52,12 +54,19 @@ local function buildPoleModelCache()
     local names = {}
     local offsets = {}
 
+    for hash, enabled in pairs(cfg.powerPoleModelHashes or {}) do
+        if enabled == true and type(hash) == 'number' and names[hash] == nil then
+            hashes[#hashes + 1] = hash
+            names[hash] = tostring(hash)
+        end
+    end
+
     for _, modelName in ipairs(cfg.powerPoleModels or {}) do
         local hash = type(modelName) == 'number' and modelName or joaat(modelName)
         if hash and names[hash] == nil then
             hashes[#hashes + 1] = hash
-            names[hash] = modelName
         end
+        if hash then names[hash] = modelName end
     end
 
     for modelName, offset in pairs(cfg.modelStrikeOffsets or {}) do
@@ -178,95 +187,144 @@ local function formatVector(coords)
     return ('vector3(%.2f, %.2f, %.2f)'):format(coords.x, coords.y, coords.z)
 end
 
-local function getStrikeCoords(poleEntity, poleCoords)
-    local cache = getPoleModelCache()
-    local model = GetEntityModel(poleEntity)
-    local offset = cache.offsets[model] or lightningConfig().defaultStrikeOffset or vector3(0.0, 0.0, 11.0)
-    local coords = poleCoords or GetEntityCoords(poleEntity)
+local function GetPowerPoleStrikeCoords(poleEntity)
+    if not poleEntity or poleEntity == 0 or not DoesEntityExist(poleEntity) then return nil end
 
+    local cache = getPoleModelCache()
+    local cfg = lightningConfig()
+    local model = GetEntityModel(poleEntity)
+    local offset = cache.offsets[model]
+    if offset then
+        return GetOffsetFromEntityInWorldCoords(poleEntity, offset.x, offset.y, offset.z)
+    end
+
+    local minDim, maxDim = GetModelDimensions(model)
+    if type(maxDim) == 'vector3' then
+        local zOffset = maxDim.z + (tonumber(cfg.strikeTopZOffset) or 0.8)
+        return GetOffsetFromEntityInWorldCoords(poleEntity, 0.0, 0.0, zOffset)
+    end
+
+    offset = cfg.defaultStrikeOffset or vector3(0.0, 0.0, 11.0)
+    return GetOffsetFromEntityInWorldCoords(poleEntity, offset.x, offset.y, offset.z)
+end
+
+local function getStrikeCoords(poleEntity)
+    return GetPowerPoleStrikeCoords(poleEntity)
+end
+
+local function getFallbackStrikeCoords(pole)
+    if pole.strikeCoords then return pole.strikeCoords end
+
+    local offset = lightningConfig().defaultStrikeOffset or vector3(0.0, 0.0, 11.0)
     return vector3(
-        coords.x + offset.x,
-        coords.y + offset.y,
-        coords.z + offset.z
+        pole.coords.x + offset.x,
+        pole.coords.y + offset.y,
+        pole.coords.z + offset.z
     )
 end
 
-local function findNearestPowerPole(radius, allowFullScan)
+local function FindNearestPowerPole(originCoords, radius, allowFullScan)
     local cfg = lightningConfig()
     local cache = getPoleModelCache()
-    local pedCoords = GetEntityCoords(PlayerPedId())
+    originCoords = originCoords or GetEntityCoords(PlayerPedId())
+    radius = tonumber(radius) or cfg.searchRadius or 160.0
+
     local nearestEntity = nil
     local nearestCoords = nil
     local nearestDistSq = radius * radius
-    local sourceName = nil
-
-    for _, model in ipairs(cache.hashes) do
-        local object = GetClosestObjectOfType(
-            pedCoords.x,
-            pedCoords.y,
-            pedCoords.z,
-            radius,
-            model,
-            false,
-            false,
-            false
-        )
-
-        if object ~= 0 and DoesEntityExist(object) then
-            local coords = GetEntityCoords(object)
-            local distanceSq = distSq(coords, pedCoords)
-            if distanceSq <= nearestDistSq then
-                nearestEntity = object
-                nearestCoords = coords
-                nearestDistSq = distanceSq
-                sourceName = 'closest_object'
-            end
-        end
-    end
-
-    if nearestEntity then
-        local model = GetEntityModel(nearestEntity)
-        return {
-            entity = nearestEntity,
-            coords = nearestCoords,
-            model = model,
-            modelName = cache.names[model] or tostring(model),
-            distance = math.sqrt(nearestDistSq),
-            source = sourceName,
-        }
-    end
 
     local pool = GetGamePool('CObject')
     local maxScanned = allowFullScan and #pool or math.min(#pool, cfg.poolScanLimit or 220)
 
     for index = 1, maxScanned do
         local object = pool[index]
-        if DoesEntityExist(object) then
+        if object and object ~= 0 and DoesEntityExist(object) then
             local model = GetEntityModel(object)
             if cache.names[model] then
                 local coords = GetEntityCoords(object)
-                local distanceSq = distSq(coords, pedCoords)
+                local distanceSq = distSq(coords, originCoords)
                 if distanceSq <= nearestDistSq then
                     nearestEntity = object
                     nearestCoords = coords
                     nearestDistSq = distanceSq
-                    sourceName = 'pool_scan'
                 end
             end
         end
     end
 
-    if not nearestEntity then return nil end
+    if not nearestEntity then return nil, nil end
 
     local model = GetEntityModel(nearestEntity)
-    return {
+    return nearestEntity, math.sqrt(nearestDistSq), {
         entity = nearestEntity,
         coords = nearestCoords,
         model = model,
         modelName = cache.names[model] or tostring(model),
         distance = math.sqrt(nearestDistSq),
-        source = sourceName,
+        source = 'pool_scan',
     }
+end
+
+local function findNearestPowerPole(originCoords, radius, allowFullScan)
+    local poleEntity, distance, details = FindNearestPowerPole(originCoords, radius, allowFullScan)
+    if not poleEntity then return nil end
+    return details
+end
+
+local function coerceFallbackPole(entry)
+    if type(entry) == 'vector3' then
+        return entry, nil
+    end
+
+    if type(entry) ~= 'table' then return nil, nil end
+
+    local coords = entry.coords or entry.position or entry
+    if type(coords) ~= 'vector3' then
+        local x = tonumber(coords.x)
+        local y = tonumber(coords.y)
+        local z = tonumber(coords.z)
+        if not x or not y or not z then return nil, nil end
+        coords = vector3(x + 0.0, y + 0.0, z + 0.0)
+    end
+
+    local strikeCoords = entry.strikeCoords or entry.strike
+    if type(strikeCoords) == 'table' and type(strikeCoords) ~= 'vector3' then
+        local x = tonumber(strikeCoords.x)
+        local y = tonumber(strikeCoords.y)
+        local z = tonumber(strikeCoords.z)
+        strikeCoords = x and y and z and vector3(x + 0.0, y + 0.0, z + 0.0) or nil
+    end
+
+    return coords, strikeCoords
+end
+
+local function findNearestFallbackPowerPole(originCoords, radius)
+    local cfg = lightningConfig()
+    local fallback = cfg.fallbackPowerPoleCoords or cfg.powerPoleFallbackCoords or {}
+    local radiusSq = radius * radius
+    local nearest = nil
+    local nearestDistSq = radiusSq
+
+    for _, entry in ipairs(fallback) do
+        local coords, strikeCoords = coerceFallbackPole(entry)
+        if coords then
+            local distanceSq = distSq(coords, originCoords)
+            if distanceSq <= nearestDistSq then
+                nearest = {
+                    entity = nil,
+                    coords = coords,
+                    strikeCoords = strikeCoords,
+                    model = cfg.fallbackPoleModel or `prop_telegraph_01a`,
+                    modelName = 'fallback_power_pole',
+                    distance = math.sqrt(distanceSq),
+                    source = 'fallback_coords',
+                }
+                nearestDistSq = distanceSq
+            end
+        end
+    end
+
+    return nearest
 end
 
 local function scanNearbyPowerPoles(radius)
@@ -276,7 +334,7 @@ local function scanNearbyPowerPoles(radius)
     local poles = {}
 
     for _, object in ipairs(GetGamePool('CObject')) do
-        if DoesEntityExist(object) then
+        if object and object ~= 0 and DoesEntityExist(object) then
             local model = GetEntityModel(object)
             if cache.names[model] then
                 local coords = GetEntityCoords(object)
@@ -452,7 +510,12 @@ local function requestPoleStrike(debugRequested)
         end
     end
 
-    local pole = findNearestPowerPole(cfg.searchRadius or 160.0, debugRequested == true)
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local pole = findNearestPowerPole(playerCoords, cfg.searchRadius or 160.0, debugRequested == true)
+    if not pole then
+        pole = findNearestFallbackPowerPole(playerCoords, cfg.searchRadius or 160.0)
+    end
+
     if not pole then
         if debugRequested then
             print('^3[weather] No nearby streamed power pole found.^0')
@@ -460,7 +523,9 @@ local function requestPoleStrike(debugRequested)
         return false
     end
 
-    local strikeCoords = getStrikeCoords(pole.entity, pole.coords)
+    local strikeCoords = pole.entity and getStrikeCoords(pole.entity) or getFallbackStrikeCoords(pole)
+    if not strikeCoords then return false end
+
     TriggerServerEvent('dynamic_weather:server:requestLightningPoleStrike', {
         strikeCoords = {
             x = strikeCoords.x,
@@ -492,49 +557,60 @@ local function requestPoleStrike(debugRequested)
 end
 
 local function debugScan(radius, exportOnly)
+    radius = tonumber(radius) or lightningConfig().searchRadius or 160.0
     local poles = scanNearbyPowerPoles(radius)
     if #poles == 0 then
         print('^3[weather] No nearby streamed power poles found.^0')
         return
     end
 
-    print(('^3[weather] Nearby power poles: %d^0'):format(#poles))
+    print(('^3[weather] Nearby power poles: %d within %.1fm^0'):format(#poles, radius))
     for index, pole in ipairs(poles) do
-        local strikeCoords = getStrikeCoords(pole.entity, pole.coords)
-        if exportOnly then
-            print(('{ model = %q, coords = %s, strike = %s },'):format(
-                pole.modelName,
-                formatVector(pole.coords),
-                formatVector(strikeCoords)))
-        else
-            print(('%d. %s dist=%.1fm base=%s strike=%s'):format(
-                index,
-                pole.modelName,
-                pole.distance,
-                formatVector(pole.coords),
-                formatVector(strikeCoords)))
-        end
+        local strikeCoords = getStrikeCoords(pole.entity)
+        if strikeCoords then
+            if exportOnly then
+                print(('{ model = %q, coords = %s, strike = %s },'):format(
+                    pole.modelName,
+                    formatVector(pole.coords),
+                    formatVector(strikeCoords)))
+            else
+                print(('%d. %s dist=%.1fm base=%s strike=%s'):format(
+                    index,
+                    pole.modelName,
+                    pole.distance,
+                    formatVector(pole.coords),
+                    formatVector(strikeCoords)))
+            end
 
-        if debugEnabled then
-            pushDebugMarker(strikeCoords, 7000)
+            if debugEnabled then
+                pushDebugMarker(strikeCoords, 7000)
+            end
         end
     end
 end
 
 local function handleCommand(data)
     local action = type(data) == 'table' and data.action or 'nearest'
+    local radius = type(data) == 'table' and data.radius or lightningConfig().searchRadius or 160.0
+
     if action == 'nearest' then
         requestPoleStrike(true)
         return
     end
 
     if action == 'scan' then
-        debugScan(lightningConfig().searchRadius or 160.0, false)
+        debugScan(radius, false)
         return
     end
 
     if action == 'export' then
-        debugScan(lightningConfig().searchRadius or 160.0, true)
+        debugScan(radius, true)
+        return
+    end
+
+    if action == 'debugscan' then
+        debugEnabled = true
+        debugScan(radius, false)
         return
     end
 
@@ -643,6 +719,14 @@ function lightningPole.stop()
     debugMarkers = {}
     restoreBaselineLighting()
     StopGameplayCamShaking(true)
+end
+
+function lightningPole.FindNearestPowerPole(originCoords, radius)
+    return FindNearestPowerPole(originCoords, radius, true)
+end
+
+function lightningPole.GetPowerPoleStrikeCoords(poleEntity)
+    return GetPowerPoleStrikeCoords(poleEntity)
 end
 
 return lightningPole
