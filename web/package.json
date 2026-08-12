@@ -16,6 +16,11 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.2.0"
+    "vite": "^6.4.3"
+  },
+  "overrides": {
+    "@babel/core": "7.29.7",
+    "nanoid": "3.3.18",
+    "postcss": "8.5.26"
   }
 }
