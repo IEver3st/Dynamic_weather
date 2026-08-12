@@ -1,4 +1,3 @@
-const OX_TILE_URL = 'https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg'
 const OX_MAP_CENTER = [-119.43, 58.84]
 const OX_LAT_PR_100 = 1.421
 const OX_MIN_ZOOM = 2
@@ -24,7 +23,6 @@ export function mapToGame(lat, lng) {
 }
 
 export {
-  OX_TILE_URL,
   OX_MAP_CENTER,
   OX_LAT_PR_100,
   OX_MIN_ZOOM,

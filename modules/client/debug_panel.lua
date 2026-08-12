@@ -4,24 +4,24 @@ local UPDATE_MS = 500
 local active = false
 
 local function dbgExportsOk()
-    return type(exports.es_lib) == 'table'
-        and type(exports.es_lib.showDebugPanel) == 'function'
+    return type(exports['cortex-lib']) == 'table'
+        and type(exports['cortex-lib'].showDebugPanel) == 'function'
 end
 
 local function dbgShow(payload)
-    exports.es_lib:showDebugPanel(payload)
+    exports['cortex-lib']:showDebugPanel(payload)
 end
 
 local function dbgUpdate(payload)
-    exports.es_lib:updateDebugPanel(payload)
+    exports['cortex-lib']:updateDebugPanel(payload)
 end
 
 local function dbgHide()
-    exports.es_lib:hideDebugPanel()
+    exports['cortex-lib']:hideDebugPanel()
 end
 
 local function dbgIsOpen()
-    return exports.es_lib:isDebugPanelOpen()
+    return exports['cortex-lib']:isDebugPanelOpen()
 end
 
 local function formatDuration(seconds)
@@ -144,7 +144,7 @@ end
 
 RegisterCommand('weatherdebug', function()
     if not dbgExportsOk() then
-        print('^1[weather] es_lib debug panel exports missing (start es_lib)^0')
+        print('^1[weather] cortex-lib debug panel exports missing (start cortex-lib)^0')
         return
     end
 

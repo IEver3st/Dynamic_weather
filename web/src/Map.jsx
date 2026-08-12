@@ -1,7 +1,6 @@
 import { useMemo, useCallback, useEffect } from 'react'
 import {
   MapContainer,
-  TileLayer,
   Polygon,
   CircleMarker,
   useMapEvents,
@@ -14,7 +13,6 @@ import {
   OX_MAX_ZOOM,
   OX_STARTUP_ZOOM,
   OX_MAP_BOUNDS,
-  OX_TILE_URL,
   gameToMap,
   mapToGame,
 } from './constants.js'
@@ -300,12 +298,6 @@ export default function MapCanvas({
           className="dw-map"
         >
           <MapBootstrap />
-          <TileLayer
-            url={OX_TILE_URL}
-            bounds={OX_MAP_BOUNDS}
-            minZoom={OX_MIN_ZOOM}
-            maxZoom={OX_MAX_ZOOM}
-          />
           <ClickHandler onClick={onMapClick} />
           <MapZoomControls />
           <FitBoundsController fitSignal={fitSignal} zone={fitTarget} />

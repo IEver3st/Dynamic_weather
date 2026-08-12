@@ -27,19 +27,19 @@ Config.syncOnJoinImmediate = true
 Config.editorStaleAfterPingMs = 20000
 Config.editorStaleBeforeFirstPingMs = 60000
 
--- ACE permissions aligned with es_admin-style action permissions.
+-- ACE permissions aligned with cortex-admin-style action permissions.
 Config.Permissions = {
-    all = 'es_admin.all',
-    weather = 'es_admin.world',
+    all = 'cortex-admin.all',
+    weather = 'cortex-admin.world',
 }
 
 Config.ActionPermissions = {
-    ['weather.editor'] = 'es_admin.world.weather.editor',
-    ['weather.reload'] = 'es_admin.world.weather.reload',
-    ['weather.force'] = 'es_admin.world.weather.force',
-    ['weather.debug'] = 'es_admin.world.weather.debug',
-    ['weather.sealevel'] = 'es_admin.world.weather.sealevel',
-    ['weather.hurricane'] = 'es_admin.world.weather.hurricane',
+    ['weather.editor'] = 'cortex-admin.world.weather.editor',
+    ['weather.reload'] = 'cortex-admin.world.weather.reload',
+    ['weather.force'] = 'cortex-admin.world.weather.force',
+    ['weather.debug'] = 'cortex-admin.world.weather.debug',
+    ['weather.sealevel'] = 'cortex-admin.world.weather.sealevel',
+    ['weather.hurricane'] = 'cortex-admin.world.weather.hurricane',
 }
 
 -- Debug

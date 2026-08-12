@@ -1,4 +1,5 @@
 local hurricane = {}
+local lastStateRequestBySource = {}
 
 local active = false
 local state = {
@@ -252,7 +253,15 @@ function hurricane.endHurricane(actor)
 end
 
 RegisterNetEvent('dynamic_weather:hurricane:requestState', function()
-    hurricane.sendToPlayer(source)
+    local src = source
+    local now = GetGameTimer()
+    if now - (lastStateRequestBySource[src] or 0) < 1000 then return end
+    lastStateRequestBySource[src] = now
+    hurricane.sendToPlayer(src)
+end)
+
+AddEventHandler('playerDropped', function()
+    lastStateRequestBySource[source] = nil
 end)
 
 return hurricane

@@ -2,14 +2,13 @@ fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
 
-dependency 'es_lib'
-
-author 'Everest Studios'
+dependency 'cortex-lib'
+author 'Cortex'
 description 'Cortex Dynamic Weather - Multi-zone weather system with seamless transitions'
 version '1.0.0'
 
 shared_scripts {
-    '@es_lib/init.lua',
+    '@cortex-lib/init.lua',
     'shared/config.lua',
     'shared/lang.lua',
 }
@@ -58,7 +57,6 @@ files {
     'shared/data/flood_ignore_zones.json',
     'shared/data/protected_water.json',
     'modules/client/*.lua',
-    'modules/server/*.lua',
     'modules/shared/*.lua',
 }
 

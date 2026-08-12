@@ -3,7 +3,7 @@
 **Date:** 2026-04-25  
 **Resource:** `Dynamic_weather`  
 **Type:** Standalone FiveM resource  
-**Dependencies:** es_lib (utility, UI tokens), ox_tiles CDN (map imagery)
+**Dependencies:** cortex-lib (utility, UI tokens)
 
 ---
 
@@ -253,7 +253,7 @@ When an admin saves zones via the editor:
 
 - **Framework:** React 19 + Vite
 - **Map:** Leaflet 1.9 + react-leaflet 5 with L.CRS.Simple
-- **Tiles:** `https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg`
+- **Map surface:** local coordinate grid (offline; no runtime tile dependency)
 - **Coordinate mapping:** Same projection as cortex_mdt
 - **Styles:** Custom dark theme matching cortex_mdt aesthetic
 - **Communication:** NUI callbacks via `fetch()` to `GetParentResourceName()`
@@ -262,7 +262,7 @@ When an admin saves zones via the editor:
 
 ```js
 // constants.js
-const OX_TILE_URL = 'https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg'
+const OX_MAP_BACKGROUND = 'local-coordinate-grid'
 const OX_MAP_CENTER = [-119.43, 58.84]
 const OX_LAT_PR_100 = 1.421
 const OX_MIN_ZOOM = 2
@@ -345,7 +345,7 @@ Each zone polygon on the map reflects its current weather:
 
 ### 8.7 Admin Access
 
-Editor is opened via `/weathereditor` command. Requires ACE permission `es_admin.weather.editor` (or specified in config). Only one player can have the editor open at a time (server-side guard).
+Editor is opened via `/weathereditor` command. Requires ACE permission `cortex-admin.weather.editor` (or specified in config). Only one player can have the editor open at a time (server-side guard).
 
 ---
 
@@ -366,8 +366,8 @@ Editor is opened via `/weathereditor` command. Requires ACE permission `es_admin
 
 | Command | Args | Permission | Description |
 |---------|------|------------|-------------|
-| `/weathereditor` | — | `es_admin.weather.editor` | Open the zone editor UI |
-| `/weather reload` | — | `es_admin.weather.reload` | Reload zones from files |
+| `/weathereditor` | — | `cortex-admin.weather.editor` | Open the zone editor UI |
+| `/weather reload` | — | `cortex-admin.weather.reload` | Reload zones from files |
 | `/weather info` | — | Any player | Show current zone + weather info |
 
 ---
@@ -391,7 +391,7 @@ Config = {
   syncOnJoinImmediate = true,      -- Send state immediately on player join
 
   -- Editor
-  editorRequiresAce = 'es_admin.weather.editor',
+  editorRequiresAce = 'cortex-admin.weather.editor',
   editorAllowMultipleUsers = false, -- Only one admin at a time
 
   -- Debug
@@ -402,12 +402,12 @@ Config = {
 
 ---
 
-## 12. es_admin Integration (Future)
+## 12. cortex-admin Integration (Future)
 
-When es_admin is ready to integrate:
+When cortex-admin is ready to integrate:
 
 ```lua
--- In es_admin shared/actions.lua
+-- In cortex-admin shared/actions.lua
 {
   id = 'weather.editor',
   label = 'Weather Zones',
@@ -416,13 +416,13 @@ When es_admin is ready to integrate:
   icon = 'cloud',
 }
 
--- In es_admin shared/config.lua
-['weather.editor'] = 'es_admin.weather.editor',
-['weather.reload'] = 'es_admin.weather.reload',
-['weather.set']    = 'es_admin.weather.set',
+-- In cortex-admin shared/config.lua
+['weather.editor'] = 'cortex-admin.weather.editor',
+['weather.reload'] = 'cortex-admin.weather.reload',
+['weather.set']    = 'cortex-admin.weather.set',
 ```
 
-The editor can be launched from es_admin's world panel using `TriggerEvent('dynamic_weather:openEditor')`.
+The editor can be launched from cortex-admin's world panel using `TriggerEvent('dynamic_weather:openEditor')`.
 
 ---
 
@@ -433,7 +433,7 @@ The editor can be launched from es_admin's world panel using `TriggerEvent('dyna
 3. **Phase 3: Server Sync** — Sequence engine, broadcast protocol, player join sync, commands
 4. **Phase 4: Storage** — Zone CRUD, file I/O, validation, reload
 5. **Phase 5: UI** — React + Vite + Leaflet app, map, sidebar, zone editor, toolbar, save/load
-6. **Phase 6: Integration** — Exports, es_admin hooks, polish, testing
+6. **Phase 6: Integration** — Exports, cortex-admin hooks, polish, testing
 
 ---
 

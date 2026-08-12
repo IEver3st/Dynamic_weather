@@ -1,4 +1,5 @@
 local seaLevel = {}
+local lastStateRequestBySource = {}
 
 local currentLevel = nil
 local currentMode = 'absolute'
@@ -205,7 +206,15 @@ function seaLevel.sendToPlayer(src)
 end
 
 RegisterNetEvent('dynamic_weather:seaLevel:requestState', function()
-    seaLevel.sendToPlayer(source)
+    local src = source
+    local now = GetGameTimer()
+    if now - (lastStateRequestBySource[src] or 0) < 1000 then return end
+    lastStateRequestBySource[src] = now
+    seaLevel.sendToPlayer(src)
+end)
+
+AddEventHandler('playerDropped', function()
+    lastStateRequestBySource[source] = nil
 end)
 
 return seaLevel

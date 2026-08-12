@@ -1537,7 +1537,11 @@ button.dw-select-trigger {
 .dw-map {
   width: 100%;
   height: 100%;
-  background: #0c0e12;
+  background-color: #0c0e12;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 .dw-map .leaflet-tile-pane {

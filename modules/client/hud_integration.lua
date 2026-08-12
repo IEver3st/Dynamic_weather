@@ -13,19 +13,13 @@ function getHudWeatherSnapshot()
     end
 
     local coords = GetEntityCoords(ped)
-    local x, y = coords.x, coords.y
-    local zone = engine.findPlayerZone(x, y)
-    local zoneId = zone and zone.id or nil
+    local zone = engine.findPlayerZone(coords.x, coords.y)
 
     if not lib.callback or not lib.callback.await then
         return nil
     end
 
-    local snap = lib.callback.await('dynamic_weather:getHudWeatherSnapshot', false, {
-        zoneId = zoneId,
-        x = x,
-        y = y,
-    })
+    local snap = lib.callback.await('dynamic_weather:getHudWeatherSnapshot', false, {})
 
     if type(snap) ~= 'table' or not snap.ok then
         return nil

@@ -1,6 +1,21 @@
 local commandsModule = {}
 local editorActive = false
 local editorUser = nil
+local requestRateState = {}
+
+local function allowRequest(src, key, minimumIntervalMs)
+    local now = GetGameTimer()
+    local state = requestRateState[src]
+    if not state then
+        state = {}
+        requestRateState[src] = state
+    end
+
+    local lastAt = state[key] or 0
+    if (now - lastAt) < minimumIntervalMs then return false end
+    state[key] = now
+    return true
+end
 
 local function hasPermission(src, actionId)
     if IsPlayerAceAllowed(src, Config.Permissions.all) then
@@ -21,7 +36,7 @@ local function hasPermission(src, actionId)
 end
 
 local function notifyPlayer(src, data)
-    TriggerClientEvent('es_lib:notify', src, data)
+    TriggerClientEvent('cortex-lib:notify', src, data)
 end
 
 local function notifyOrPrint(src, data)
@@ -82,6 +97,12 @@ local function sendEditorSnapshot(src)
     })
 end
 
+local function canUseEditor(src, actionKey, minimumIntervalMs)
+    if not hasPermission(src, 'weather.editor') then return false end
+    if not editorActive or editorUser ~= src then return false end
+    return allowRequest(src, actionKey, minimumIntervalMs or 200)
+end
+
 RegisterCommand('weathereditor', function(source, args, raw)
     local src = source > 0 and source or 0
     if src > 0 then
@@ -120,10 +141,12 @@ RegisterNetEvent('dynamic_weather:server:openEditor', function(force)
         return
     end
 
-    if editorActive and not force then
+    if editorActive and editorUser ~= src then
         TriggerClientEvent('dynamic_weather:editorBlocked', src)
         return
     end
+
+    if not allowRequest(src, 'openEditor', 1000) then return end
 
     editorActive = true
     editorUser = src
@@ -138,7 +161,7 @@ end)
 
 RegisterNetEvent('dynamic_weather:server:saveZones', function(zones)
     local src = source
-    if not hasPermission(src, 'weather.editor') then return end
+    if not canUseEditor(src, 'saveZones', 500) then return end
 
     local storage = lib.require('modules.server.storage')
     local ok, err = storage.saveZones(zones)
@@ -163,7 +186,7 @@ end)
 
 RegisterNetEvent('dynamic_weather:server:saveProtectedWater', function(bodies)
     local src = source
-    if not hasPermission(src, 'weather.editor') then return end
+    if not canUseEditor(src, 'saveProtectedWater', 500) then return end
 
     local storage = lib.require('modules.server.storage')
     local ok, err = storage.saveProtectedWater(bodies)
@@ -186,7 +209,7 @@ end)
 
 RegisterNetEvent('dynamic_weather:server:saveFloodSettings', function(settings)
     local src = source
-    if not hasPermission(src, 'weather.editor') then return end
+    if not canUseEditor(src, 'saveFloodSettings', 500) then return end
 
     local storage = lib.require('modules.server.storage')
     local ok, result = storage.saveFloodSettings(settings)
@@ -210,7 +233,7 @@ end)
 
 RegisterNetEvent('dynamic_weather:server:saveFloodIgnoreZones', function(floodIgnoreZones)
     local src = source
-    if not hasPermission(src, 'weather.editor') then return end
+    if not canUseEditor(src, 'saveFloodIgnoreZones', 500) then return end
 
     local storage = lib.require('modules.server.storage')
     local ok, err = storage.saveFloodIgnoreZones(floodIgnoreZones)
@@ -233,19 +256,21 @@ end)
 
 RegisterNetEvent('dynamic_weather:protectedWater:request', function()
     local src = source
+    if not canUseEditor(src, 'protectedWaterRequest', 500) then return end
     local storage = lib.require('modules.server.storage')
     TriggerClientEvent('dynamic_weather:protectedWater:update', src, storage.getProtectedWaterBodies())
 end)
 
 RegisterNetEvent('dynamic_weather:server:loadZones', function()
     local src = source
+    if not canUseEditor(src, 'loadZones', 500) then return end
     sendEditorSnapshot(src)
 end)
 
 RegisterNetEvent('dynamic_weather:server:editorSetZoneWeather', function(zoneId, weatherType)
     local src = source
-    if not hasPermission(src, 'weather.editor') then return end
-    if type(zoneId) ~= 'string' or type(weatherType) ~= 'string' then return end
+    if not canUseEditor(src, 'setZoneWeather', 200) then return end
+    if type(zoneId) ~= 'string' or #zoneId == 0 or #zoneId > 64 or type(weatherType) ~= 'string' or #weatherType == 0 or #weatherType > 32 then return end
 
     local ok, err = setZoneWeather(zoneId, string.upper(weatherType), { preserveRuntime = true })
     if not ok then
@@ -262,8 +287,8 @@ end)
 
 RegisterNetEvent('dynamic_weather:server:editorAdvanceZone', function(zoneId)
     local src = source
-    if not hasPermission(src, 'weather.editor') then return end
-    if type(zoneId) ~= 'string' or #zoneId == 0 then return end
+    if not canUseEditor(src, 'advanceZone', 500) then return end
+    if type(zoneId) ~= 'string' or #zoneId == 0 or #zoneId > 64 then return end
 
     local sequence = lib.require('modules.server.sequence')
     local ok = sequence.forceAdvance(zoneId)
@@ -281,6 +306,7 @@ end)
 
 RegisterNetEvent('dynamic_weather:requestSync', function()
     local src = source
+    if not allowRequest(src, 'requestSync', 1000) then return end
     local sync = lib.require('modules.server.sync')
     sync.sendToPlayer(src)
 end)
@@ -541,7 +567,7 @@ RegisterCommand('flood', function(source, args)
 
     local height = nil
     if args and args[1] ~= nil then
-        height = tonumber(args[1])
+        height = parseNumber(args[1])
         if not height then
             notifyOrPrint(src, {
                 title = 'Sea Level',
@@ -675,6 +701,7 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
+    requestRateState[src] = nil
     if editorUser == src then
         editorActive = false
         editorUser = nil

@@ -2,6 +2,7 @@ local lightningPole = {}
 local handlersRegistered = false
 local recentStrikes = {}
 local lastStrikeBySource = {}
+local lastRequestBySource = {}
 local poleModelCache = nil
 
 local GetEntityCoords = GetEntityCoords
@@ -12,6 +13,13 @@ local TriggerClientEvent = TriggerClientEvent
 local ipairs = ipairs
 local tonumber = tonumber
 local type = type
+
+local function isFiniteNumber(value)
+    return type(value) == 'number'
+        and value == value
+        and value ~= math.huge
+        and value ~= -math.huge
+end
 
 local function lightningConfig()
     return Config.LightningPoleStrike or {}
@@ -54,7 +62,8 @@ local function toVector3(payload)
     local x = tonumber(payload.x)
     local y = tonumber(payload.y)
     local z = tonumber(payload.z)
-    if not x or not y or not z then return nil end
+    if not isFiniteNumber(x) or not isFiniteNumber(y) or not isFiniteNumber(z) then return nil end
+    if math.abs(x) > 20000.0 or math.abs(y) > 20000.0 or z < -2000.0 or z > 5000.0 then return nil end
 
     return vector3(x + 0.0, y + 0.0, z + 0.0)
 end
@@ -135,13 +144,13 @@ local function isStormEligible(coords)
     return severity >= (cfg.minSeverity or 4)
 end
 
-local function broadcastStrike(strikeCoords, payload)
+local function broadcastStrike(strikeCoords, payload, sourceBucket)
     local syncRadius = lightningConfig().syncRadius or 400.0
     local syncRadiusSq = syncRadius * syncRadius
 
     for _, playerId in ipairs(GetPlayers()) do
         local target = tonumber(playerId)
-        if target and GetPlayerName(target) then
+        if target and GetPlayerName(target) and GetPlayerRoutingBucket(target) == sourceBucket then
             local ped = GetPlayerPed(target)
             if ped and ped ~= 0 then
                 local pedCoords = GetEntityCoords(ped)
@@ -162,6 +171,10 @@ local function registerHandlers()
         local cfg = lightningConfig()
         if type(data) ~= 'table' then return end
 
+        local now = GetGameTimer()
+        if now - (lastRequestBySource[src] or 0) < 500 then return end
+        lastRequestBySource[src] = now
+
         local debugStrike = data.debug == true and hasDebugPermission(src)
         if cfg.enabled == false and not debugStrike then return end
 
@@ -169,6 +182,7 @@ local function registerHandlers()
         local poleCoords = toVector3(data.poleCoords)
         local model = tonumber(data.model)
         if not strikeCoords or not poleCoords or not model then return end
+        if not isFiniteNumber(model) or model ~= math.floor(model) then return end
         if not isAllowedPoleModel(model) then return end
 
         local ped = GetPlayerPed(src)
@@ -183,7 +197,6 @@ local function registerHandlers()
         maxOffsetSq = maxOffsetSq * maxOffsetSq
         if distSq(poleCoords, strikeCoords) > maxOffsetSq then return end
 
-        local now = GetGameTimer()
         cleanupRecentStrikes(now)
 
         if not debugStrike then
@@ -240,7 +253,7 @@ local function registerHandlers()
             debug = debugStrike,
         }
 
-        broadcastStrike(strikeCoords, payload)
+        broadcastStrike(strikeCoords, payload, GetPlayerRoutingBucket(src))
     end)
 end
 
@@ -251,6 +264,7 @@ end
 function lightningPole.stop()
     recentStrikes = {}
     lastStrikeBySource = {}
+    lastRequestBySource = {}
 end
 
 function lightningPole.handleCommand(source, args, hasPermission, notifyPlayer)
@@ -272,11 +286,21 @@ function lightningPole.handleCommand(source, args, hasPermission, notifyPlayer)
     end
 
     local radius = tonumber(args and args[2])
+    if not isFiniteNumber(radius) then
+        radius = lightningConfig().searchRadius or 160.0
+    end
+    radius = math.max(5.0, math.min(radius, 500.0))
 
     TriggerClientEvent('dynamic_weather:client:runLightningPoleCommand', src, {
         action = sub,
         radius = radius,
     })
 end
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    lastStrikeBySource[src] = nil
+    lastRequestBySource[src] = nil
+end)
 
 return lightningPole

@@ -1,3 +1,5 @@
+local lastRequestBySource = {}
+
 local function hasDebugPermission(src)
     if IsPlayerAceAllowed(src, Config.Permissions.all) then
         return true
@@ -17,12 +19,18 @@ end
 
 local function registerDebugCallback()
     local ok, err = pcall(function()
-        exports.es_lib:registerCallback('dynamic_weather:getZoneSequenceDebug', function(playerSrc, zoneId)
+        exports['cortex-lib']:registerCallback('dynamic_weather:getZoneSequenceDebug', function(playerSrc, zoneId)
             if not hasDebugPermission(playerSrc) then
                 return { ok = false, denied = true }
             end
 
-            if type(zoneId) ~= 'string' or #zoneId == 0 then
+            local now = GetGameTimer()
+            if (now - (lastRequestBySource[playerSrc] or 0)) < 500 then
+                return { ok = false, rateLimited = true }
+            end
+            lastRequestBySource[playerSrc] = now
+
+            if type(zoneId) ~= 'string' or #zoneId == 0 or #zoneId > 64 then
                 return { ok = false }
             end
 
@@ -62,4 +70,8 @@ AddEventHandler('onResourceStart', function(name)
         Wait(0)
         registerDebugCallback()
     end)
+end)
+
+AddEventHandler('playerDropped', function()
+    lastRequestBySource[source] = nil
 end)

@@ -49,13 +49,14 @@ test('sea level apply path skips and restores protected quads', () => {
   assert.match(seaLevel, /floodignoredebug/);
 });
 
-test('flood command treats numeric argument as offset', () => {
+test('flood command treats finite numeric argument as offset', () => {
   const commands = read('modules/server/commands.lua');
   const serverSeaLevel = read('modules/server/sea_level.lua');
   const config = read('shared/config.lua');
 
   assert.match(commands, /RegisterCommand\('flood'/);
-  assert.match(commands, /height = tonumber\(args\[1\]\)/);
+  assert.match(commands, /height = parseNumber\(args\[1\]\)/);
+  assert.match(commands, /n ~= n or n == math\.huge or n == -math\.huge/);
   assert.match(commands, /seaLevel\.flood\(getActorName\(src\), 'offset', height\)/);
   assert.match(serverSeaLevel, /function seaLevel\.flood\(actor, mode, level, profile\)/);
   assert.match(config, /floodMode = 'offset'/);
