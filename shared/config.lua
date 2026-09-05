@@ -38,87 +38,11 @@ Config.ActionPermissions = {
     ['weather.reload'] = 'cortex-admin.world.weather.reload',
     ['weather.force'] = 'cortex-admin.world.weather.force',
     ['weather.debug'] = 'cortex-admin.world.weather.debug',
-    ['weather.sealevel'] = 'cortex-admin.world.weather.sealevel',
     ['weather.hurricane'] = 'cortex-admin.world.weather.hurricane',
 }
 
 -- Debug
 Config.debugLog = false
-
-Config.FloodRecessionDefaultDuration = 120
-Config.FloodRecessionMinDuration = 10
-Config.FloodRecessionMaxDuration = 900
-Config.FloodRecessionUpdateInterval = 1000
-
--- Protected vanilla water bodies are loaded from shared/data/protected_water.json.
--- Flood applies skip matching water quads and restores sampled water heights after each pass.
-Config.ProtectedWater = {
-    enabled = true,
-    defaultPadding = 150.0,
-    defaultRestoreRadius = 250.0,
-    maxProtectedQuadSkipArea = 6000000.0,
-    autoRestoreHeight = true,
-    autoRestoreGrid = false,
-    maxAutoRestorePointsPerZone = 8,
-    autoRestorePointSpacingScale = 1.25,
-    restoreAfterApply = true,
-    clampModifyWaterRadius = true,
-    zeroRestoreHeightMeansAuto = true,
-    modifyWaterOrder = 'height_radius',
-    debugModifyWater = false,
-    debugRestoreSampling = false,
-    debugDrawZ = 40.0,
-    debugColor = { r = 0, g = 180, b = 255, a = 220 },
-}
-
--- Random scripted flood: sequence ticks can spawn a natural flood during thunder, then force thunder in all zones and raise sea level.
-Config.FloodEvent = {
-    enabled = true,
-    chance = 0.08,
-    chanceMin = 0.08,
-    chanceMax = 0.08,
-    maxOffset = 2.0,
-    recommendedMaxOffset = 2.0,
-    requireThunder = true,
-    thunderWeather = 'THUNDER',
-    thunderCondition = 'any_zone',
-    stormLeadSeconds = 45,
-    autoDispatch = true,
-    dispatchType = 'WEATHER_FLOOD',
-    dispatchTitle = 'Coastal flooding emergency',
-    dispatchMessage = 'Severe coastal flooding in progress. Avoid low-lying areas and storm surge zones.',
-    dispatchSeverity = 5,
-    dispatchCoords = nil,
-    serverEventOnStart = nil,
-    serverEventOnEnd = nil,
-}
-
-Config.SeaLevel = {
-    enabled = true,
-    minSeaLevel = -10.0,
-    maxSeaLevel = 400.0,
-    -- Runtime safety clamp. Extreme mountain-height water exposes GTA water LOD/tile seams.
-    maxSafeSeaLevel = 80.0,
-    defaultSmoothSeconds = 60,
-    adminOnly = true,
-    smoothTickMs = 1000,
-    floodHeight = 2.0,
-    floodMode = 'offset',
-    flashFloodWaterFile = 'flood_calm.xml',
-    hurricaneFloodWaterFile = 'flood.xml',
-    defaultFloodWaterProfile = 'flash',
-    floodWaveQuadIds = { 0 },
-    flashFloodWaveAmplitude = 0.0,
-    hurricaneFloodWaveAmplitude = 1.0,
-    floodTickMs = 2000,
-    floodIncreaseRate = 0.02,
-    floodIgnoreApplyThreshold = 0.02,
-    floodIgnoreMaxApplyIntervalMs = 10000,
-    floodIgnoreSmoothingStep = 0.05,
-    floodIgnoreMaxQuadArea = 2500000.0,
-    braveFloodHeight = 2.0,
-    braveFloodIncreaseRate = 0.02,
-}
 
 -- MDT / dispatch data support
 Config.WeatherData = {
@@ -327,13 +251,6 @@ Config.Hurricane = {
         [4] = 32.0,
         [5] = 40.0,
     },
-    floodTargetByIntensity = {
-        [1] = 0.5,
-        [2] = 1.0,
-        [3] = 1.5,
-        [4] = 2.0,
-        [5] = 2.5,
-    },
     lightningMultiplierByIntensity = {
         [1] = 1.0,
         [2] = 1.4,
@@ -341,9 +258,6 @@ Config.Hurricane = {
         [4] = 2.4,
         [5] = 3.0,
     },
-    floodLeadSeconds = 20,
-    endFloodOnStop = true,
-    floodRecessionSeconds = 120,
 }
 
 -- Hurricane debris: client-local flying litter/objects during /hurricane.

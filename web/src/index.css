@@ -858,15 +858,6 @@ html, body, #root {
   min-width: 0;
 }
 
-.dw-inspector-titles--flood {
-  gap: calc(4px * var(--es-ui-scale));
-}
-
-.dw-inspector-titles--flood .dw-inspector-id {
-  font-size: calc(11px * var(--es-ui-scale));
-  color: rgba(180, 188, 202, 0.92);
-}
-
 .dw-inspector-name {
   font-size: calc(17px * var(--es-ui-scale));
   font-weight: 600;
@@ -892,10 +883,6 @@ html, body, #root {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: calc(10px * var(--es-ui-scale));
   margin-top: 0;
-}
-
-.dw-inspector-metrics--flood {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .dw-metric {

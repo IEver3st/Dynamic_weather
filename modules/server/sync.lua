@@ -5,9 +5,7 @@ local function broadcast()
     local storage = lib.require('modules.server.storage')
     local zones = storage.getClientZones()
     local states = storage.getZoneStates()
-    local floodIgnoreZones = storage.getFloodIgnoreZones()
-
-    TriggerClientEvent('dynamic_weather:sync', -1, zones, states, floodIgnoreZones)
+    TriggerClientEvent('dynamic_weather:sync', -1, zones, states)
 end
 
 function syncModule.start()
@@ -47,8 +45,7 @@ function syncModule.sendToPlayer(src)
     local storage = lib.require('modules.server.storage')
     local zones = storage.getClientZones()
     local states = storage.getZoneStates()
-    local floodIgnoreZones = storage.getFloodIgnoreZones()
-    TriggerClientEvent('dynamic_weather:sync', src, zones, states, floodIgnoreZones)
+    TriggerClientEvent('dynamic_weather:sync', src, zones, states)
 end
 
 function syncModule.broadcastImmediate()

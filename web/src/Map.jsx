@@ -113,48 +113,6 @@ function ZonePolygon({ zone, weather, isSelected, onClick }) {
   )
 }
 
-function FloodIgnorePolygon({ zone, isSelected, onClick }) {
-  const color = zone.mapColor || '#38bdf8'
-  const positions = useMemo(
-    () => (zone.points || []).map((p) => gameToMap(p.x, p.y)),
-    [zone.points]
-  )
-
-  const pathOptions = useMemo(
-    () => ({
-      color: isSelected ? '#e0f2fe' : color,
-      weight: isSelected ? 3 : 2,
-      fillColor: color,
-      fillOpacity: isSelected ? 0.2 : 0.1,
-      dashArray: zone.enabled === false ? '8 4' : '4 4',
-    }),
-    [isSelected, color, zone.enabled]
-  )
-
-  const handleClick = useCallback(
-    (e) => {
-      L.DomEvent.stopPropagation(e)
-      onClick(zone.id)
-    },
-    [zone.id, onClick]
-  )
-
-  const eventHandlers = useMemo(
-    () => ({ click: handleClick }),
-    [handleClick]
-  )
-
-  if (positions.length < 3) return null
-
-  return (
-    <Polygon
-      positions={positions}
-      pathOptions={pathOptions}
-      eventHandlers={eventHandlers}
-    />
-  )
-}
-
 function DrawPreview({ points, shape }) {
   if (!points || points.length === 0) return null
 
@@ -267,9 +225,7 @@ function SelectedZoneHandles({ zone, onUpdatePoints }) {
 
 export default function MapCanvas({
   zones,
-  floodIgnoreZones = [],
   states,
-  activeLayer,
   selectedId,
   drawMode,
   drawShape,
@@ -279,8 +235,7 @@ export default function MapCanvas({
   onSelectZone,
   onUpdatePoints,
 }) {
-  const activeItems = activeLayer === 'floods' ? floodIgnoreZones : zones
-  const selectedZone = activeItems.find((zone) => zone.id === selectedId) || null
+  const selectedZone = zones.find((zone) => zone.id === selectedId) || null
   const fitTarget = selectedZone
 
   return (
@@ -302,30 +257,19 @@ export default function MapCanvas({
           <MapZoomControls />
           <FitBoundsController fitSignal={fitSignal} zone={fitTarget} />
 
-          {activeLayer === 'zones' &&
-            zones.map((zone) => (
-              <ZonePolygon
-                key={zone.id}
-                zone={zone}
-                weather={states[zone.id]?.currentWeather || 'CLEAR'}
-                isSelected={zone.id === selectedId}
-                onClick={onSelectZone}
-              />
-            ))}
-
-          {activeLayer === 'floods' &&
-            floodIgnoreZones.map((zone) => (
-              <FloodIgnorePolygon
-                key={zone.id}
-                zone={zone}
-                isSelected={zone.id === selectedId}
-                onClick={onSelectZone}
-              />
-            ))}
+          {zones.map((zone) => (
+            <ZonePolygon
+              key={zone.id}
+              zone={zone}
+              weather={states[zone.id]?.currentWeather || 'CLEAR'}
+              isSelected={zone.id === selectedId}
+              onClick={onSelectZone}
+            />
+          ))}
 
           {drawMode && <DrawPreview points={drawPoints} shape={drawShape} />}
 
-          {!drawMode && (activeLayer === 'zones' || activeLayer === 'floods') && selectedZone && selectedZone.points?.length >= 3 && (
+          {!drawMode && selectedZone && selectedZone.points?.length >= 3 && (
             <SelectedZoneHandles zone={selectedZone} onUpdatePoints={onUpdatePoints} />
           )}
         </MapContainer>

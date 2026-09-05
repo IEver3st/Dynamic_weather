@@ -17,11 +17,8 @@ env:
     LICENSE
     README.md
     init.lua
-    flood.xml
-    flood_calm.xml
     modules
     shared
-    water_levels
     web/dist
 
 jobs:
@@ -122,7 +119,7 @@ jobs:
           unzip -q "dist/$asset" -d extracted
           test -f "extracted/$RESOURCE_NAME/fxmanifest.lua"
           test -f "extracted/$RESOURCE_NAME/web/dist/index.html"
-          test -f "extracted/$RESOURCE_NAME/shared/data/protected_water.json"
+          test -f "extracted/$RESOURCE_NAME/shared/data/zones.json"
           (cd dist && sha256sum "$asset" > "$asset.sha256")
 
       - name: Create GitHub release

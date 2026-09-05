@@ -388,7 +388,6 @@ function weatherData.getHudSnapshot(zoneId, x, y)
     if not zone then
         local w = buildZoneWeather(nil)
         local weather = w.weather
-        local flood = lib.require('modules.server.flood_event')
         return {
             ok = true,
             inZone = false,
@@ -400,8 +399,6 @@ function weatherData.getHudSnapshot(zoneId, x, y)
             intervalMinutes = 15,
             forecast = {},
             wetEtaSeconds = isWetHudWeather(weather) and 0 or nil,
-            floodEventActive = flood.isActive(),
-            floodPhase = flood.getPhase(),
         }
     end
 
@@ -439,7 +436,6 @@ function weatherData.getHudSnapshot(zoneId, x, y)
         end
     end
 
-    local flood = lib.require('modules.server.flood_event')
     return {
         ok = true,
         inZone = true,
@@ -451,8 +447,6 @@ function weatherData.getHudSnapshot(zoneId, x, y)
         intervalMinutes = intervalMinutes,
         forecast = simpleForecast,
         wetEtaSeconds = wetEta,
-        floodEventActive = flood.isActive(),
-        floodPhase = flood.getPhase(),
     }
 end
 

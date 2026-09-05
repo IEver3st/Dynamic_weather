@@ -15,11 +15,6 @@ local function startHurricaneDebris()
     if hurricaneDebris then hurricaneDebris.start() end
 end
 
-local function startSeaLevel()
-    local seaLevel = lib.require('modules.client.sea_level')
-    if seaLevel then seaLevel.start() end
-end
-
 local function startLightningPole()
     local lightningPole = lib.require('modules.client.lightning_pole')
     if lightningPole then lightningPole.start() end
@@ -35,7 +30,6 @@ AddEventHandler('onClientResourceStart', function(name)
     startSync()
     Wait(500)
     startEngine()
-    startSeaLevel()
     startHurricaneDebris()
     startStormProps()
     startLightningPole()
@@ -45,8 +39,6 @@ AddEventHandler('onResourceStop', function(name)
     if name ~= resourceName then return end
     local engine = lib.require('modules.client.engine')
     if engine then engine.stop() end
-    local seaLevel = lib.require('modules.client.sea_level')
-    if seaLevel then seaLevel.stop() end
     local hurricaneDebris = lib.require('modules.client.hurricane_debris')
     if hurricaneDebris then hurricaneDebris.stop() end
     local stormProps = lib.require('modules.client.storm_props')
@@ -137,18 +129,6 @@ end
 
 function getBlackout()
     return GlobalState.dynamic_weather_blackout == true
-end
-
-function isFloodEventActive()
-    return GlobalState.dynamic_weather_flood_active == true
-end
-
-function getFloodEventState()
-    return {
-        active = GlobalState.dynamic_weather_flood_active == true,
-        phase = GlobalState.dynamic_weather_flood_phase,
-        startedAt = GlobalState.dynamic_weather_flood_started_at,
-    }
 end
 
 ---@return number|nil distance, string|nil nearestZoneId, string|nil nearestZoneLabel

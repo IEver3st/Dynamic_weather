@@ -57,12 +57,7 @@ local function tickSequence()
     local sequences = storage.getSequences()
     local states = storage.getZoneStates()
 
-    if not zones or tableLength(zones) == 0 then
-        if not lib.require('modules.server.hurricane').isActive() then
-            lib.require('modules.server.flood_event').maybeRoll()
-        end
-        return
-    end
+    if not zones or tableLength(zones) == 0 then return end
 
     local currentTime = os.time()
     local hour = getHour(currentTime)
@@ -77,9 +72,8 @@ local function tickSequence()
                 if state.timeUntilAdvance <= 0 then
                     local seq = sequences[zone.sequence]
                     local intervalMinutes = seq and seq.intervalMinutes or 15
-                    local floodEvent = lib.require('modules.server.flood_event')
                     local hurricane = lib.require('modules.server.hurricane')
-                    if floodEvent.blocksSequenceAdvance() or hurricane.isActive() then
+                    if hurricane.isActive() then
                         state.timeUntilAdvance = intervalMinutes * 60
                     else
                         local sequence = seq
@@ -119,12 +113,6 @@ local function tickSequence()
             print(('^3[weather] Sequence advanced %d zones (hour %.0f)^0'):format(
                 tableLength(changedZones), hour))
         end
-    end
-
-    local hurricane = lib.require('modules.server.hurricane')
-    if not hurricane.isActive() then
-        local floodEvent = lib.require('modules.server.flood_event')
-        floodEvent.maybeRoll()
     end
 end
 

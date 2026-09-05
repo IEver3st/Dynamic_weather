@@ -4,20 +4,9 @@ import Toolbar from './Toolbar.jsx'
 import Sidebar from './Sidebar.jsx'
 import MapCanvas from './Map.jsx'
 import Inspector from './Inspector.jsx'
-import FloodPanel from './FloodPanel.jsx'
 import { defaultMapColorForIndex } from './zoneColorUtils.js'
 
 const SCALE_KEY = 'dw_ui_scale'
-
-const DEFAULT_FLOOD_SETTINGS = {
-  enabled: true,
-  chance: 0.08,
-  maxOffset: 2,
-  recommendedMaxOffset: 2,
-  requireThunder: true,
-  thunderCondition: 'any_zone',
-  stormLeadSeconds: 45,
-}
 
 function readStoredScale() {
   try {
@@ -34,9 +23,6 @@ export default function Editor({ payload, onClose }) {
   const [zones, setZones] = useState(payload?.zones || [])
   const [states, setStates] = useState(payload?.states || {})
   const [sequences, setSequences] = useState(payload?.sequences || {})
-  const [floodSettings, setFloodSettings] = useState({ ...DEFAULT_FLOOD_SETTINGS, ...(payload?.floodSettings || {}) })
-  const [floodIgnoreZones, setFloodIgnoreZones] = useState(payload?.floodIgnoreZones || [])
-  const [activeLayer, setActiveLayer] = useState('zones')
   const [selectedId, setSelectedId] = useState(null)
   const [drawMode, setDrawMode] = useState(false)
   const [drawShape, setDrawShape] = useState('polygon')
@@ -62,10 +48,6 @@ export default function Editor({ payload, onClose }) {
     if (payload?.zones) setZones(payload.zones)
     if (payload?.states) setStates(payload.states)
     if (payload?.sequences) setSequences(payload.sequences)
-    if (payload?.floodSettings) {
-      setFloodSettings((prev) => ({ ...prev, ...payload.floodSettings }))
-    }
-    if (payload?.floodIgnoreZones) setFloodIgnoreZones(payload.floodIgnoreZones)
   }, [payload])
 
   useEffect(() => {
@@ -84,11 +66,9 @@ export default function Editor({ payload, onClose }) {
 
   useEffect(() => {
     if (!deleteConfirmId) return
-    const exists = activeLayer === 'floods'
-      ? floodIgnoreZones.some((z) => z.id === deleteConfirmId)
-      : zones.some((z) => z.id === deleteConfirmId)
+    const exists = zones.some((z) => z.id === deleteConfirmId)
     if (!exists) setDeleteConfirmId(null)
-  }, [zones, floodIgnoreZones, activeLayer, deleteConfirmId])
+  }, [zones, deleteConfirmId])
 
   const flashMessage = useCallback((text) => {
     setMessage(text)
@@ -96,18 +76,14 @@ export default function Editor({ payload, onClose }) {
     messageTimer.current = setTimeout(() => setMessage(null), 3200)
   }, [])
 
-  const selected = activeLayer === 'floods'
-    ? floodIgnoreZones.find((z) => z.id === selectedId) || null
-    : zones.find((z) => z.id === selectedId) || null
+  const selected = zones.find((z) => z.id === selectedId) || null
 
   const handleSave = useCallback(async () => {
     flashMessage('Saving...')
     await postNui('dw_saveZones', { zones })
-    await postNui('dw_saveFloodSettings', { floodSettings })
-    await postNui('dw_saveFloodIgnoreZones', { floodIgnoreZones })
-    flashMessage('Zones and floods saved')
+    flashMessage('Zones saved')
     setDirty(false)
-  }, [zones, floodSettings, floodIgnoreZones, flashMessage])
+  }, [zones, flashMessage])
 
   const handleLoad = useCallback(async () => {
     flashMessage('Loading from server...')
@@ -116,10 +92,8 @@ export default function Editor({ payload, onClose }) {
       const resp = await postNui('dw_requestZones')
       if (resp.zones) setZones(resp.zones)
       if (resp.states) setStates(resp.states)
-      if (resp.floodSettings) setFloodSettings((prev) => ({ ...prev, ...resp.floodSettings }))
-      if (resp.floodIgnoreZones) setFloodIgnoreZones(resp.floodIgnoreZones)
       setDirty(false)
-      flashMessage('Data reloaded')
+      flashMessage('Zones reloaded')
     }, 300)
   }, [flashMessage])
 
@@ -145,7 +119,6 @@ export default function Editor({ payload, onClose }) {
         mapColor: defaultMapColorForIndex(zones.length),
       }
       setZones((prev) => [...prev, newZone])
-      setActiveLayer('zones')
       setSelectedId(newId)
       setDrawShape(shape)
       setDrawMode(true)
@@ -164,46 +137,6 @@ export default function Editor({ payload, onClose }) {
   const handleAddZone = useCallback(() => beginNewZone('polygon'), [beginNewZone])
   const handleAddRectZone = useCallback(() => beginNewZone('rectangle'), [beginNewZone])
 
-  const beginNewFloodIgnoreZone = useCallback(
-    (shape) => {
-      if (drawMode) {
-        setDrawMode(false)
-        setDrawPoints([])
-        rectCornerRef.current = null
-        return
-      }
-
-      const newId = `flood_ignore_${Date.now()}`
-      const newZone = {
-        id: newId,
-        zoneType: 'flood_ignore',
-        name: `Flood Ignore Zone ${floodIgnoreZones.length + 1}`,
-        type: 'polygon',
-        points: [],
-        enabled: true,
-        fadeDistance: 150,
-        mapColor: '#38bdf8',
-      }
-      setFloodIgnoreZones((prev) => [...prev, newZone])
-      setActiveLayer('floods')
-      setSelectedId(newId)
-      setDrawShape(shape)
-      setDrawMode(true)
-      setDrawPoints([])
-      rectCornerRef.current = null
-      setDirty(true)
-      flashMessage(
-        shape === 'rectangle'
-          ? 'Rectangle ignore zone: place opposite corners.'
-          : 'Polygon ignore zone: place vertices; click near start to close.'
-      )
-    },
-    [drawMode, floodIgnoreZones.length, flashMessage]
-  )
-
-  const handleAddFloodIgnoreZone = useCallback(() => beginNewFloodIgnoreZone('polygon'), [beginNewFloodIgnoreZone])
-  const handleAddFloodIgnoreRectZone = useCallback(() => beginNewFloodIgnoreZone('rectangle'), [beginNewFloodIgnoreZone])
-
   const handleDrawShapeChange = useCallback((shape) => {
     if (!drawMode) return
     setDrawShape(shape)
@@ -214,19 +147,13 @@ export default function Editor({ payload, onClose }) {
 
   const handleMapClick = useCallback(
     (latlng) => {
-      if (!drawMode || (activeLayer !== 'zones' && activeLayer !== 'floods') || !selectedId) return
+      if (!drawMode || !selectedId) return
 
       const newPoint = { x: latlng.x, y: latlng.y }
       const applyPoints = (points) => {
-        if (activeLayer === 'floods') {
-          setFloodIgnoreZones((prevZones) =>
-            prevZones.map((z) => (z.id === selectedId ? { ...z, points } : z))
-          )
-        } else {
-          setZones((prevZones) =>
-            prevZones.map((z) => (z.id === selectedId ? { ...z, points } : z))
-          )
-        }
+        setZones((prevZones) =>
+          prevZones.map((z) => (z.id === selectedId ? { ...z, points } : z))
+        )
       }
 
       if (drawShape === 'rectangle') {
@@ -251,7 +178,7 @@ export default function Editor({ payload, onClose }) {
         setDirty(true)
         setDrawMode(false)
         setDrawPoints([])
-        flashMessage(activeLayer === 'floods' ? 'Rectangle ignore zone completed' : 'Rectangle zone completed')
+        flashMessage('Rectangle zone completed')
         return
       }
 
@@ -266,7 +193,7 @@ export default function Editor({ payload, onClose }) {
             setDirty(true)
             setDrawMode(false)
             setDrawPoints([])
-            flashMessage(activeLayer === 'floods' ? 'Ignore zone polygon completed' : 'Zone polygon completed')
+            flashMessage('Zone polygon completed')
             return prev
           }
         }
@@ -274,7 +201,7 @@ export default function Editor({ payload, onClose }) {
         return updated
       })
     },
-    [drawMode, selectedId, activeLayer, drawShape, flashMessage]
+    [drawMode, selectedId, drawShape, flashMessage]
   )
 
   const handleFinishDraw = useCallback(() => {
@@ -286,50 +213,39 @@ export default function Editor({ payload, onClose }) {
       return
     }
     if (drawPoints.length >= 3 && selectedId) {
-      if (activeLayer === 'floods') {
-        setFloodIgnoreZones((prev) =>
-          prev.map((z) => (z.id === selectedId ? { ...z, points: drawPoints } : z))
-        )
-      } else {
-        setZones((prev) =>
-          prev.map((z) => (z.id === selectedId ? { ...z, points: drawPoints } : z))
-        )
-      }
+      setZones((prev) =>
+        prev.map((z) => (z.id === selectedId ? { ...z, points: drawPoints } : z))
+      )
       setDirty(true)
-      flashMessage(activeLayer === 'floods' ? 'Ignore zone polygon completed' : 'Zone polygon completed')
+      flashMessage('Zone polygon completed')
     } else if (drawPoints.length > 0 && drawPoints.length < 3) {
       flashMessage('Need at least 3 points for a polygon')
     }
     setDrawMode(false)
     setDrawPoints([])
     rectCornerRef.current = null
-  }, [drawPoints, selectedId, flashMessage, drawShape, activeLayer])
+  }, [drawPoints, selectedId, flashMessage, drawShape])
 
   const handleSelectZone = useCallback(
     (id) => {
       if (drawMode) handleFinishDraw()
-      if (activeLayer !== 'floods') setActiveLayer('zones')
       setSelectedId(id)
     },
-    [drawMode, handleFinishDraw, activeLayer]
+    [drawMode, handleFinishDraw]
   )
 
   const handleDeleteZone = useCallback(
     (id) => {
-      if (activeLayer === 'floods') {
-        setFloodIgnoreZones((prev) => prev.filter((z) => z.id !== id))
-      } else {
-        setZones((prev) => prev.filter((z) => z.id !== id))
-      }
+      setZones((prev) => prev.filter((z) => z.id !== id))
       if (selectedId === id) setSelectedId(null)
       setDirty(true)
-      flashMessage(activeLayer === 'floods' ? 'Ignore zone deleted (unsaved)' : 'Zone deleted (unsaved)')
+      flashMessage('Zone deleted (unsaved)')
     },
-    [selectedId, flashMessage, activeLayer]
+    [selectedId, flashMessage]
   )
 
   const pendingDeleteItem = deleteConfirmId
-    ? (activeLayer === 'floods' ? floodIgnoreZones : zones).find((z) => z.id === deleteConfirmId)
+    ? zones.find((z) => z.id === deleteConfirmId)
     : null
 
   const handleConfirmDeleteZone = useCallback(() => {
@@ -345,26 +261,7 @@ export default function Editor({ payload, onClose }) {
 
   const handleUpdatePoints = useCallback((id, points) => {
     setDirty(true)
-    if (activeLayer === 'floods') {
-      setFloodIgnoreZones((prev) => prev.map((z) => (z.id === id ? { ...z, points } : z)))
-    } else {
-      setZones((prev) => prev.map((z) => (z.id === id ? { ...z, points } : z)))
-    }
-  }, [activeLayer])
-
-  const handleUpdateFloodIgnoreZone = useCallback((id, updates) => {
-    setDirty(true)
-    setFloodIgnoreZones((prev) => prev.map((z) => (z.id === id ? { ...z, ...updates } : z)))
-  }, [])
-
-  const handleUpdateFloodIgnorePoints = useCallback((id, points) => {
-    setDirty(true)
-    setFloodIgnoreZones((prev) => prev.map((z) => (z.id === id ? { ...z, points } : z)))
-  }, [])
-
-  const handleUpdateFloodSettings = useCallback((updates) => {
-    setDirty(true)
-    setFloodSettings((prev) => ({ ...prev, ...updates }))
+    setZones((prev) => prev.map((z) => (z.id === id ? { ...z, points } : z)))
   }, [])
 
   const handleDuplicateZone = useCallback(
@@ -384,23 +281,6 @@ export default function Editor({ payload, onClose }) {
     [flashMessage]
   )
 
-  const handleDuplicateFloodIgnoreZone = useCallback(
-    (zone) => {
-      const newId = `flood_ignore_${Date.now()}`
-      const copy = {
-        ...zone,
-        id: newId,
-        name: `${zone.name || 'Flood Ignore Zone'} copy`,
-        points: (zone.points || []).map((p) => ({ x: p.x, y: p.y })),
-      }
-      setFloodIgnoreZones((prev) => [...prev, copy])
-      setSelectedId(newId)
-      setDirty(true)
-      flashMessage('Ignore zone duplicated (unsaved)')
-    },
-    [flashMessage]
-  )
-
   const handleFitMap = useCallback(() => {
     if (!selected?.points?.length) {
       flashMessage('Selected zone has no geometry yet')
@@ -408,14 +288,6 @@ export default function Editor({ payload, onClose }) {
     }
     setFitSignal((n) => n + 1)
   }, [selected, flashMessage])
-
-  const handleActiveLayerChange = useCallback(
-    (layer) => {
-      if (drawMode) handleFinishDraw()
-      setActiveLayer(layer)
-    },
-    [drawMode, handleFinishDraw]
-  )
 
   const handleClose = useCallback(async () => {
     await postNui('dw_closeEditor')
@@ -498,10 +370,6 @@ export default function Editor({ payload, onClose }) {
       <Toolbar
         onAddZone={handleAddZone}
         onAddRectZone={handleAddRectZone}
-        onAddFloodIgnoreZone={handleAddFloodIgnoreZone}
-        onAddFloodIgnoreRectZone={handleAddFloodIgnoreRectZone}
-        activeLayer={activeLayer}
-        onActiveLayerChange={handleActiveLayerChange}
         onSave={handleSave}
         onLoad={handleLoad}
         onClose={handleClose}
@@ -516,18 +384,14 @@ export default function Editor({ payload, onClose }) {
       <div className="dw-workspace">
         <Sidebar
           zones={zones}
-          floodIgnoreZones={floodIgnoreZones}
           states={states}
-          activeLayer={activeLayer}
           selectedId={selectedId}
           onSelect={handleSelectZone}
           onRequestDelete={(id) => setDeleteConfirmId(id)}
         />
         <MapCanvas
           zones={zones}
-          floodIgnoreZones={floodIgnoreZones}
           states={states}
-          activeLayer={activeLayer}
           selectedId={selectedId}
           drawMode={drawMode}
           drawShape={drawShape}
@@ -537,29 +401,17 @@ export default function Editor({ payload, onClose }) {
           onSelectZone={handleSelectZone}
           onUpdatePoints={handleUpdatePoints}
         />
-        {activeLayer === 'floods' ? (
-          <FloodPanel
-            settings={floodSettings}
-            ignoreZone={selected}
-            onUpdate={handleUpdateFloodSettings}
-            onUpdateIgnoreZone={handleUpdateFloodIgnoreZone}
-            onUpdateIgnorePoints={handleUpdateFloodIgnorePoints}
-            onDuplicateIgnoreZone={handleDuplicateFloodIgnoreZone}
-            onFitMap={handleFitMap}
-          />
-        ) : (
-          <Inspector
-            zone={selected}
-            states={states}
-            sequences={sequences}
-            onUpdateZone={handleUpdateZone}
-            onUpdatePoints={handleUpdatePoints}
-            onDuplicate={handleDuplicateZone}
-            onFitMap={handleFitMap}
-            onSetZoneWeather={handleEditorSetZoneWeather}
-            onAdvanceZoneWeather={handleEditorAdvanceZone}
-          />
-        )}
+        <Inspector
+          zone={selected}
+          states={states}
+          sequences={sequences}
+          onUpdateZone={handleUpdateZone}
+          onUpdatePoints={handleUpdatePoints}
+          onDuplicate={handleDuplicateZone}
+          onFitMap={handleFitMap}
+          onSetZoneWeather={handleEditorSetZoneWeather}
+          onAdvanceZoneWeather={handleEditorAdvanceZone}
+        />
       </div>
       {drawMode && (
         <div className="dw-draw-indicator" role="status">
@@ -575,7 +427,7 @@ export default function Editor({ payload, onClose }) {
       )}
       <footer className="dw-editor-foot">
         <span>Esc - close editor / F10 - force close if UI freezes</span>
-        <span>Floods - controls natural flood chance, map-wide sea offset, and local ignore zones</span>
+        <span>Draw, configure, save, and reload weather zones</span>
       </footer>
     </div>
   )

@@ -7,11 +7,9 @@ local state = {
     intensity = 0,
     windDirection = 0.0,
     windSpeed = 0.0,
-    floodTarget = 0.0,
     lightningMultiplier = 1.0,
 }
 local snapshot = nil
-local token = 0
 
 local function cfg()
     return Config.Hurricane or {}
@@ -45,7 +43,6 @@ local function copyStateForClient()
         intensity = state.intensity or 0,
         windDirection = state.windDirection or 0.0,
         windSpeed = state.windSpeed or 0.0,
-        floodTarget = state.floodTarget or 0.0,
         lightningMultiplier = state.lightningMultiplier or 1.0,
         startedAt = state.startedAt,
     }
@@ -142,21 +139,6 @@ local function restoreSnapshot()
     snapshot = nil
 end
 
-local function startFloodAfterLead(actor, currentToken)
-    local leadMs = math.max(0, math.floor((tonumber(cfg().floodLeadSeconds) or 20) * 1000))
-
-    CreateThread(function()
-        Wait(leadMs)
-        if token ~= currentToken or not active then return end
-
-        local seaLevel = lib.require('modules.server.sea_level')
-        local ok, err = seaLevel.flood(actor or 'hurricane', 'offset', state.floodTarget, 'hurricane')
-        if not ok then
-            print(('^1[weather] Hurricane flood failed: %s^0'):format(tostring(err)))
-        end
-    end)
-end
-
 function hurricane.start()
     if GlobalState.dynamic_weather_hurricane == nil then
         GlobalState.dynamic_weather_hurricane = copyStateForClient()
@@ -192,35 +174,30 @@ function hurricane.startHurricane(opts, actor)
     local intensity = clampIntensity(opts.intensity)
     local windSpeed = tonumber(opts.windSpeed) or tableValueByIntensity('windSpeedByIntensity', intensity, 32.0)
     local windDirection = normalizeDirection(opts.windDirection)
-    local floodTarget = tonumber(opts.floodTarget) or tableValueByIntensity('floodTargetByIntensity', intensity, 2.0)
     local lightningMultiplier = tonumber(opts.lightningMultiplier) or tableValueByIntensity('lightningMultiplierByIntensity', intensity, 2.4)
 
     if not active or not snapshot then
         snapshot = takeSnapshot()
     end
 
-    token = token + 1
     active = true
     state = {
         active = true,
         intensity = intensity,
         windDirection = windDirection,
         windSpeed = windSpeed,
-        floodTarget = floodTarget,
         lightningMultiplier = lightningMultiplier,
         startedAt = os.time(),
     }
 
     applyHurricaneWeather()
     publishState(-1)
-    startFloodAfterLead(actor or 'hurricane', token)
     TriggerEvent('dynamic_weather:hurricaneStarted', copyStateForClient())
 
-    print(('^3[weather] Hurricane started intensity=%d wind=%.1f direction=%.1f flood=%.2f actor=%s^0'):format(
+    print(('^3[weather] Hurricane started intensity=%d wind=%.1f direction=%.1f actor=%s^0'):format(
         intensity,
         windSpeed,
         windDirection,
-        floodTarget,
         actor or 'unknown'
     ))
 
@@ -233,20 +210,10 @@ function hurricane.endHurricane(actor)
     end
 
     active = false
-    token = token + 1
     state.active = false
     state.intensity = 0
     publishState(-1)
     restoreSnapshot()
-
-    if cfg().endFloodOnStop ~= false then
-        local seaLevel = lib.require('modules.server.sea_level')
-        local status = seaLevel.getStatus and seaLevel.getStatus() or {}
-        if status.floodActive or status.floodReceding then
-            seaLevel.endFlood(tonumber(cfg().floodRecessionSeconds) or 120, actor or 'hurricane stop')
-        end
-    end
-
     TriggerEvent('dynamic_weather:hurricaneEnded', actor or 'unknown')
     print(('^2[weather] Hurricane ended actor=%s^0'):format(actor or 'unknown'))
     return true, copyStateForClient()

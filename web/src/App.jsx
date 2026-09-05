@@ -67,32 +67,6 @@ const BROWSER_PAYLOAD = {
     rural_farmland: { label: 'Rural Farmland' },
     tropical_coast: { label: 'Tropical Coast' },
   },
-  floodSettings: {
-    enabled: true,
-    chance: 0.08,
-    maxOffset: 2,
-    recommendedMaxOffset: 2,
-    requireThunder: true,
-    thunderCondition: 'any_zone',
-    stormLeadSeconds: 45,
-  },
-  floodIgnoreZones: [
-    {
-      id: 'flood_ignore_sandy_preview',
-      zoneType: 'flood_ignore',
-      name: 'Flood Ignore Zone',
-      type: 'polygon',
-      enabled: true,
-      fadeDistance: 250,
-      mapColor: '#38bdf8',
-      points: [
-        { x: 1180, y: 3980 },
-        { x: 2620, y: 3980 },
-        { x: 2620, y: 3080 },
-        { x: 1180, y: 3080 },
-      ],
-    },
-  ],
 }
 
 export default function App() {

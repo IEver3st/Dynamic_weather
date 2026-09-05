@@ -54,35 +54,12 @@ local function getActorName(src)
     return 'console'
 end
 
-local function hasSeaLevelPermission(src)
-    local cfg = Config.SeaLevel or {}
-    if cfg.adminOnly == false then return true end
-    if src <= 0 then return true end
-    return hasPermission(src, 'weather.sealevel') or hasPermission(src, 'weather.debug')
-end
-
 local function parseNumber(value)
     local n = tonumber(value)
     if not n or n ~= n or n == math.huge or n == -math.huge then
         return nil
     end
     return n
-end
-
-local function parseSeaLevelMode(args, numberIndex)
-    local mode = 'absolute'
-    local rawMode = args and args[numberIndex + 1]
-    if type(rawMode) == 'string' then rawMode = string.lower(rawMode) end
-
-    if rawMode == 'offset' or rawMode == 'relative' then
-        mode = 'offset'
-    elseif rawMode == 'absolute' or rawMode == 'abs' then
-        mode = 'absolute'
-    elseif args and type(args[1]) == 'string' and (string.lower(args[1]) == 'offset' or string.lower(args[1]) == 'relative') then
-        mode = 'offset'
-    end
-
-    return mode
 end
 
 local function sendEditorSnapshot(src)
@@ -92,8 +69,6 @@ local function sendEditorSnapshot(src)
         zones = storage.getRawZones(),
         states = storage.getZoneStates(),
         sequences = storage.getSequences(),
-        floodSettings = storage.getFloodSettings(),
-        floodIgnoreZones = storage.getFloodIgnoreZones(),
     })
 end
 
@@ -182,83 +157,6 @@ RegisterNetEvent('dynamic_weather:server:saveZones', function(zones)
 
     local sync = lib.require('modules.server.sync')
     sync.broadcastImmediate()
-end)
-
-RegisterNetEvent('dynamic_weather:server:saveProtectedWater', function(bodies)
-    local src = source
-    if not canUseEditor(src, 'saveProtectedWater', 500) then return end
-
-    local storage = lib.require('modules.server.storage')
-    local ok, err = storage.saveProtectedWater(bodies)
-    if not ok then
-        notifyPlayer(src, {
-            title = 'Weather Editor',
-            description = ('Save failed: %s'):format(err),
-            type = 'error'
-        })
-        return
-    end
-
-    TriggerClientEvent('dynamic_weather:protectedWater:update', -1, storage.getProtectedWaterBodies())
-    notifyPlayer(src, {
-        title = 'Weather Editor',
-        description = ('%d protected water bodies saved.'):format(#bodies),
-        type = 'success'
-    })
-end)
-
-RegisterNetEvent('dynamic_weather:server:saveFloodSettings', function(settings)
-    local src = source
-    if not canUseEditor(src, 'saveFloodSettings', 500) then return end
-
-    local storage = lib.require('modules.server.storage')
-    local ok, result = storage.saveFloodSettings(settings)
-    if not ok then
-        notifyPlayer(src, {
-            title = 'Weather Editor',
-            description = ('Flood save failed: %s'):format(result or 'unknown error'),
-            type = 'error'
-        })
-        return
-    end
-
-    notifyPlayer(src, {
-        title = 'Weather Editor',
-        description = ('Floods saved: %.1f%% chance, %.2fm max offset.'):format((result.chance or 0) * 100, result.maxOffset or 0),
-        type = 'success'
-    })
-
-    sendEditorSnapshot(src)
-end)
-
-RegisterNetEvent('dynamic_weather:server:saveFloodIgnoreZones', function(floodIgnoreZones)
-    local src = source
-    if not canUseEditor(src, 'saveFloodIgnoreZones', 500) then return end
-
-    local storage = lib.require('modules.server.storage')
-    local ok, err = storage.saveFloodIgnoreZones(floodIgnoreZones)
-    if not ok then
-        notifyPlayer(src, {
-            title = 'Weather Editor',
-            description = ('Flood ignore save failed: %s'):format(err or 'unknown error'),
-            type = 'error'
-        })
-        return
-    end
-
-    TriggerClientEvent('dynamic_weather:floodIgnoreZones:update', -1, storage.getFloodIgnoreZones())
-    notifyPlayer(src, {
-        title = 'Weather Editor',
-        description = ('%d flood ignore zones saved.'):format(#floodIgnoreZones),
-        type = 'success'
-    })
-end)
-
-RegisterNetEvent('dynamic_weather:protectedWater:request', function()
-    local src = source
-    if not canUseEditor(src, 'protectedWaterRequest', 500) then return end
-    local storage = lib.require('modules.server.storage')
-    TriggerClientEvent('dynamic_weather:protectedWater:update', src, storage.getProtectedWaterBodies())
 end)
 
 RegisterNetEvent('dynamic_weather:server:loadZones', function()
@@ -422,176 +320,6 @@ RegisterCommand('weatheralerttest', function(source, args)
     print(('[weather] alert created: %s'):format(json.encode(alert)))
 end, false)
 
-RegisterCommand('sealevel', function(source, args)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local level = parseNumber(args and args[1])
-    local mode = parseSeaLevelMode(args, 1)
-    local firstArg = args and args[1] and string.lower(args[1]) or nil
-    if not level and (firstArg == 'offset' or firstArg == 'relative' or firstArg == 'absolute' or firstArg == 'abs') then
-        mode = (firstArg == 'offset' or firstArg == 'relative') and 'offset' or 'absolute'
-        level = parseNumber(args[2])
-    end
-
-    if not level then
-        notifyOrPrint(src, { title = 'Sea Level', description = 'Usage: /sealevel <height> [absolute|offset] or /sealevel offset <delta>', type = 'error' })
-        return
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    local ok, result = seaLevel.setLevel(level, getActorName(src), mode)
-    if not ok then
-        notifyOrPrint(src, { title = 'Sea Level', description = result or 'Sea level failed', type = 'error' })
-        return
-    end
-
-    notifyOrPrint(src, {
-        title = 'Sea Level',
-        description = ('Sea level set to %.2f (%s)'):format(result, mode),
-        type = 'success',
-    })
-end, false)
-
-RegisterCommand('sealevelsmooth', function(source, args)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local level = parseNumber(args and args[1])
-    local seconds = parseNumber(args and args[2])
-    local mode = parseSeaLevelMode(args, 2)
-    local firstArg = args and args[1] and string.lower(args[1]) or nil
-    if not level and (firstArg == 'offset' or firstArg == 'relative' or firstArg == 'absolute' or firstArg == 'abs') then
-        mode = (firstArg == 'offset' or firstArg == 'relative') and 'offset' or 'absolute'
-        level = parseNumber(args[2])
-        seconds = parseNumber(args[3])
-    end
-
-    if not level then
-        notifyOrPrint(src, { title = 'Sea Level', description = 'Usage: /sealevelsmooth <height> [seconds] [absolute|offset]', type = 'error' })
-        return
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    local ok, target, duration = seaLevel.smoothTo(level, seconds, getActorName(src), mode)
-    if not ok then
-        notifyOrPrint(src, { title = 'Sea Level', description = target or 'Sea level smooth failed', type = 'error' })
-        return
-    end
-
-    notifyOrPrint(src, {
-        title = 'Sea Level',
-        description = ('Sea level smoothing to %.2f over %.1fs (%s)'):format(target, duration, mode),
-        type = 'success',
-    })
-end, false)
-
-RegisterCommand('sealevelreset', function(source)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    seaLevel.reset(getActorName(src))
-    notifyOrPrint(src, { title = 'Sea Level', description = 'Sea level reset', type = 'success' })
-end, false)
-
-RegisterCommand('sealevelstatus', function(source)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    local status = seaLevel.getStatus()
-    local value = status.currentLevel and ('%.2f'):format(status.currentLevel) or 'default'
-    local message = ('Sea level: %s mode=%s (enabled=%s, clamp %.2f..%.2f safeMax=%.2f)'):format(
-        value,
-        status.currentMode or 'absolute',
-        tostring(status.enabled),
-        tonumber(status.minSeaLevel) or -10.0,
-        tonumber(status.maxSeaLevel) or 400.0,
-        tonumber(status.maxSafeSeaLevel) or tonumber(status.maxSeaLevel) or 80.0
-    )
-
-    print(('[weather] %s'):format(message))
-    if src > 0 then
-        notifyPlayer(src, { title = 'Sea Level', description = message, type = 'info' })
-    end
-end, false)
-
-RegisterCommand('loadwater', function(source)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    local ok, err = seaLevel.loadWater(getActorName(src))
-    if not ok then
-        notifyOrPrint(src, { title = 'Sea Level', description = err or 'Load water failed', type = 'error' })
-        return
-    end
-
-    notifyOrPrint(src, { title = 'Sea Level', description = 'Loaded full-map flood water', type = 'success' })
-end, false)
-
-RegisterCommand('resetwater', function(source)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    seaLevel.reset(getActorName(src))
-    notifyOrPrint(src, { title = 'Sea Level', description = 'Water reset', type = 'success' })
-end, false)
-
-RegisterCommand('flood', function(source, args)
-    local src = source > 0 and source or 0
-    if not hasSeaLevelPermission(src) then
-        notifyPlayer(src, { title = 'Sea Level', description = Lang.no_permission, type = 'error' })
-        return
-    end
-
-    local height = nil
-    if args and args[1] ~= nil then
-        height = parseNumber(args[1])
-        if not height then
-            notifyOrPrint(src, {
-                title = 'Sea Level',
-                description = 'Usage: /flood [offset]',
-                type = 'error',
-            })
-            return
-        end
-    end
-
-    local seaLevel = lib.require('modules.server.sea_level')
-    local ok, target, mode, profile = seaLevel.flood(getActorName(src), 'offset', height)
-    if not ok then
-        notifyOrPrint(src, { title = 'Sea Level', description = target or 'Flood failed', type = 'error' })
-        return
-    end
-
-    notifyOrPrint(src, {
-        title = 'Sea Level',
-        description = ('Flood rising to %.2f (%s, %s)'):format(target, mode or 'absolute', profile or 'flash'),
-        type = 'success',
-    })
-end, false)
-
 RegisterCommand('hurricane', function(source, args)
     local src = source > 0 and source or 0
     if src > 0 and not hasPermission(src, 'weather.hurricane') and not hasPermission(src, 'weather.force') then
@@ -615,12 +343,11 @@ RegisterCommand('hurricane', function(source, args)
 
     if sub == 'status' then
         local state = hurricane.getState()
-        local message = ('active=%s intensity=%s wind=%.1f direction=%.1f flood=%.2f lightning=%.1f'):format(
+        local message = ('active=%s intensity=%s wind=%.1f direction=%.1f lightning=%.1f'):format(
             tostring(state.active),
             tostring(state.intensity),
             tonumber(state.windSpeed) or 0.0,
             tonumber(state.windDirection) or 0.0,
-            tonumber(state.floodTarget) or 0.0,
             tonumber(state.lightningMultiplier) or 1.0
         )
         print(('[weather] hurricane %s'):format(message))
@@ -633,11 +360,9 @@ RegisterCommand('hurricane', function(source, args)
     local offset = (sub == 'start') and 1 or 0
     local intensity = parseNumber(args and args[1 + offset])
     local windDirection = parseNumber(args and args[2 + offset])
-    local floodTarget = parseNumber(args and args[3 + offset])
     local ok, result = hurricane.startHurricane({
         intensity = intensity,
         windDirection = windDirection,
-        floodTarget = floodTarget,
     }, getActorName(src))
 
     if not ok then
@@ -647,11 +372,10 @@ RegisterCommand('hurricane', function(source, args)
 
     notifyOrPrint(src, {
         title = 'Hurricane',
-        description = ('Started intensity %d, wind %.1f, direction %.1f, flood %.2f'):format(
+        description = ('Started intensity %d, wind %.1f, direction %.1f'):format(
             result.intensity,
             result.windSpeed,
-            result.windDirection,
-            result.floodTarget
+            result.windDirection
         ),
         type = 'success',
     })

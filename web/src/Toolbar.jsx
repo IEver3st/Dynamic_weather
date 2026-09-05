@@ -97,12 +97,8 @@ function SegmentToggle({ label, valueIndex, count = 2, children }) {
 }
 
 export default function Toolbar({
-  activeLayer,
-  onActiveLayerChange,
   onAddZone,
   onAddRectZone,
-  onAddFloodIgnoreZone,
-  onAddFloodIgnoreRectZone,
   onSave,
   onLoad,
   onClose,
@@ -129,26 +125,6 @@ export default function Toolbar({
         </div>
       </div>
       <div className="dw-toolbar-center">
-        <div className="dw-draw-tools">
-          <SegmentToggle label="Editor layer" valueIndex={activeLayer === 'zones' ? 0 : activeLayer === 'floods' ? 1 : 0} count={2}>
-            <button
-              type="button"
-              className={`dw-segment-toggle__btn ${activeLayer === 'zones' ? 'is-active' : ''}`}
-              aria-pressed={activeLayer === 'zones'}
-              onClick={() => onActiveLayerChange('zones')}
-            >
-              Weather zones
-            </button>
-            <button
-              type="button"
-              className={`dw-segment-toggle__btn ${activeLayer === 'floods' ? 'is-active' : ''}`}
-              aria-pressed={activeLayer === 'floods'}
-              onClick={() => onActiveLayerChange('floods')}
-            >
-              Floods
-            </button>
-          </SegmentToggle>
-        </div>
         <ScaleControl uiScale={uiScale} onUiScaleChange={onUiScaleChange} />
         {drawMode && (
           <div className="dw-draw-tools">
@@ -174,36 +150,17 @@ export default function Toolbar({
         )}
       </div>
       <div className="dw-toolbar-right">
-        {activeLayer === 'zones' && (
-          <>
-            <button type="button" className="dw-btn" onClick={onAddZone} disabled={drawMode && drawShape === 'rectangle'}>
-              {drawMode && drawShape === 'polygon' ? 'Drawing…' : '+ Polygon zone'}
-            </button>
-            <button
-              type="button"
-              className="dw-btn"
-              onClick={onAddRectZone}
-              disabled={drawMode && drawShape === 'polygon'}
-            >
-              {drawMode && drawShape === 'rectangle' ? 'Drawing…' : '+ Rectangle zone'}
-            </button>
-          </>
-        )}
-        {activeLayer === 'floods' && (
-          <>
-            <button type="button" className="dw-btn" onClick={onAddFloodIgnoreZone} disabled={drawMode && drawShape === 'rectangle'}>
-              {drawMode && drawShape === 'polygon' ? 'Drawing…' : '+ Ignore polygon'}
-            </button>
-            <button
-              type="button"
-              className="dw-btn"
-              onClick={onAddFloodIgnoreRectZone}
-              disabled={drawMode && drawShape === 'polygon'}
-            >
-              {drawMode && drawShape === 'rectangle' ? 'Drawing…' : '+ Ignore rectangle'}
-            </button>
-          </>
-        )}
+        <button type="button" className="dw-btn" onClick={onAddZone} disabled={drawMode && drawShape === 'rectangle'}>
+          {drawMode && drawShape === 'polygon' ? 'Drawing…' : '+ Polygon zone'}
+        </button>
+        <button
+          type="button"
+          className="dw-btn"
+          onClick={onAddRectZone}
+          disabled={drawMode && drawShape === 'polygon'}
+        >
+          {drawMode && drawShape === 'rectangle' ? 'Drawing…' : '+ Rectangle zone'}
+        </button>
         <button type="button" className="dw-btn" onClick={onLoad}>
           Load
         </button>

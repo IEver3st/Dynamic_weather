@@ -19,7 +19,6 @@ client_scripts {
     'modules/client/zones.lua',
     'modules/client/engine.lua',
     'modules/client/global_state.lua',
-    'modules/client/sea_level.lua',
     'modules/client/hurricane_debris.lua',
     'modules/client/storm_props.lua',
     'modules/client/lightning_pole.lua',
@@ -31,8 +30,6 @@ server_scripts {
     'modules/server/storage.lua',
     'modules/server/sequence.lua',
     'modules/server/sync.lua',
-    'modules/server/sea_level.lua',
-    'modules/server/flood_event.lua',
     'modules/server/hurricane.lua',
     'modules/server/commands.lua',
     'modules/server/debug_callback.lua',
@@ -48,14 +45,8 @@ ui_page 'web/dist/index.html'
 files {
     'web/dist/index.html',
     'web/dist/assets/*',
-    'flood.xml',
-    'flood_calm.xml',
-    'water_levels/*.xml',
     'shared/data/zones.json',
     'shared/data/sequences.json',
-    'shared/data/flood_settings.json',
-    'shared/data/flood_ignore_zones.json',
-    'shared/data/protected_water.json',
     'modules/client/*.lua',
     'modules/shared/*.lua',
 }
@@ -76,8 +67,6 @@ exports {
     'getAllZones',
     'isEditorOpen',
     'reloadZones',
-    'isFloodEventActive',
-    'getFloodEventState',
 }
 
 server_exports {
@@ -106,10 +95,6 @@ server_exports {
     'clearForceWeatherFastForAll',
     'syncWeatherToPlayer',
     'CreateDispatchIncident',
-    'IsFloodEventActive',
-    'GetFloodEventState',
-    'EndFloodEvent',
-    'StartFloodEvent',
     'IsHurricaneActive',
     'GetHurricaneState',
     'StartHurricane',

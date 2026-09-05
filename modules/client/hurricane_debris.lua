@@ -7,7 +7,6 @@ local hurricaneState = {
     intensity = 0,
     windDirection = 0.0,
     windSpeed = 0.0,
-    floodTarget = 0.0,
     lightningMultiplier = 1.0,
 }
 
@@ -666,7 +665,6 @@ local function setState(state)
         intensity = clampIntensity(state.intensity or 1),
         windDirection = tonumber(state.windDirection) or 0.0,
         windSpeed = tonumber(state.windSpeed) or 0.0,
-        floodTarget = tonumber(state.floodTarget) or 0.0,
         lightningMultiplier = tonumber(state.lightningMultiplier) or 1.0,
         startedAt = state.startedAt,
     }
