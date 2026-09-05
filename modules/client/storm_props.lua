@@ -509,6 +509,9 @@ local function spawnWindDebris(stormIntensity, forcedModel, forcedTier)
     end
 
     SetEntityAsMissionEntity(object, true, true)
+    FreezeEntityPosition(object, true)
+    PlaceObjectOnGroundProperly(object)
+    Wait(500)
     SetEntityDynamic(object, true)
     ActivatePhysics(object)
     SetEntityCollision(object, true, true)

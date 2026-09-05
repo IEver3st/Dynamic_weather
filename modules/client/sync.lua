@@ -1,5 +1,6 @@
 local zoneDefs = {}
 local zoneStates = {}
+local floodIgnoreZones = {}
 local revision = 0
 
 local syncModule = {}
@@ -13,14 +14,20 @@ local function tableLength(t)
 end
 
 function syncModule.start()
-    RegisterNetEvent('dynamic_weather:sync', function(zones, states)
+    RegisterNetEvent('dynamic_weather:sync', function(zones, states, ignoreZones)
         zoneDefs = zones or {}
         zoneStates = states or {}
+        floodIgnoreZones = ignoreZones or floodIgnoreZones or {}
         revision = revision + 1
         if Config.debugLog then
-            print(('^3[weather] Sync received: %d zones, %d states^0'):format(
-                #zoneDefs, tableLength(zoneStates)))
+            print(('^3[weather] Sync received: %d zones, %d states, %d flood ignore zones^0'):format(
+                #zoneDefs, tableLength(zoneStates), #floodIgnoreZones))
         end
+    end)
+
+    RegisterNetEvent('dynamic_weather:floodIgnoreZones:update', function(ignoreZones)
+        floodIgnoreZones = ignoreZones or {}
+        revision = revision + 1
     end)
 
     RegisterNetEvent('dynamic_weather:zoneUpdate', function(zoneId, state)
@@ -34,6 +41,7 @@ end
 function syncModule.stop()
     zoneDefs = {}
     zoneStates = {}
+    floodIgnoreZones = {}
     revision = revision + 1
 end
 
@@ -47,6 +55,10 @@ end
 
 function syncModule.getRevision()
     return revision
+end
+
+function syncModule.getFloodIgnoreZones()
+    return floodIgnoreZones
 end
 
 return syncModule

@@ -66,12 +66,19 @@ local function buildPoleModelCache()
         names = {},
     }
 
+    for hash, enabled in pairs(cfg.powerPoleModelHashes or {}) do
+        if enabled == true and type(hash) == 'number' and cache.names[hash] == nil then
+            cache.hashes[#cache.hashes + 1] = hash
+            cache.names[hash] = tostring(hash)
+        end
+    end
+
     for _, modelName in ipairs(cfg.powerPoleModels or {}) do
         local hash = type(modelName) == 'number' and modelName or joaat(modelName)
         if hash and cache.names[hash] == nil then
             cache.hashes[#cache.hashes + 1] = hash
-            cache.names[hash] = modelName
         end
+        if hash then cache.names[hash] = modelName end
     end
 
     poleModelCache = cache
@@ -172,7 +179,7 @@ local function registerHandlers()
         local maxSourceDistanceSq = maxSourceDistance * maxSourceDistance
         if distSq(playerCoords, poleCoords) > maxSourceDistanceSq then return end
 
-        local maxOffsetSq = ((cfg.defaultStrikeOffset and cfg.defaultStrikeOffset.z or 11.0) + 8.0)
+        local maxOffsetSq = ((cfg.defaultStrikeOffset and cfg.defaultStrikeOffset.z or 11.0) + 20.0)
         maxOffsetSq = maxOffsetSq * maxOffsetSq
         if distSq(poleCoords, strikeCoords) > maxOffsetSq then return end
 
@@ -259,13 +266,16 @@ function lightningPole.handleCommand(source, args, hasPermission, notifyPlayer)
     end
 
     local sub = args and args[1] and string.lower(args[1]) or 'nearest'
-    if sub ~= 'nearest' and sub ~= 'scan' and sub ~= 'debug' and sub ~= 'export' then
-        notify(src, notifyPlayer, 'Lightning Pole', 'Usage: /lightningpole [nearest|scan|debug|export]', 'error')
+    if sub ~= 'nearest' and sub ~= 'scan' and sub ~= 'debugscan' and sub ~= 'debug' and sub ~= 'export' then
+        notify(src, notifyPlayer, 'Lightning Pole', 'Usage: /lightningpole [nearest|scan|debugscan|debug|export] [radius]', 'error')
         return
     end
 
+    local radius = tonumber(args and args[2])
+
     TriggerClientEvent('dynamic_weather:client:runLightningPoleCommand', src, {
         action = sub,
+        radius = radius,
     })
 end
 
